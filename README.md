@@ -1,2 +1,2 @@
 # dcsctp4j
-Java wrapper around dcsctp
+The sctp4j project creates a JNI wrapper around the dcsctp library from libWebRTC.
