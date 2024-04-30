@@ -15,9 +15,12 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.ExposeToNative;
+
 // A very simple timeout that can be started and stopped. When started,
 // it will be given a unique `timeout_id` which should be provided to
 // `DcSctpSocket::HandleTimeout` when it expires.
+@ExposeToNative
 public interface Timeout {
     // Called to start time timeout, with the duration in milliseconds as
     // `duration` and with the timeout identifier as `timeout_id`, which - if

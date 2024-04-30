@@ -16,28 +16,48 @@
 
 package org.jitsi.dcsctp4j;
 
+import org.jitsi.utils.JNIUtils;
+import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.logging2.LoggerImpl;
+import smjni.jnigen.ExposeToNative;
+
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@ExposeToNative
 public class DcSctpSocketFactory {
+    private long ptr;
+
+    DcSctpSocketFactory() {
+        ptr = construct();
+        long ptrCopy = ptr;
+        DcSctp4j.CLEANER.register(this, () -> destruct(ptrCopy));
+    }
+
+    private static native long construct();
+
+    private static native void destruct(long ptr);
+
     public DcSctpSocketInterface create(
             String logPrefix,
             DcSctpSocketCallbacks callbacks,
             PacketObserver packetObserver,
             DcSctpOptions options)
     {
-        long socketPtr = create_(logPrefix, callbacks, packetObserver, options);
+        long socketPtr = create_(ptr, logPrefix, callbacks, packetObserver, options);
         return new NativeSctpSocket(socketPtr);
     }
 
     private native long create_(
+            long ptr,
             String logPrefix,
             DcSctpSocketCallbacks callbacks,
             PacketObserver packetObserver,
             DcSctpOptions options);
 
+    @ExposeToNative
     static private class NativeSctpSocket implements DcSctpSocketInterface {
         private final long ptr;
         NativeSctpSocket(long ptr)

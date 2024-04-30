@@ -15,6 +15,9 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.ExposeToNative;
+
+@ExposeToNative
 public enum SendStatus {
     // The message was enqueued successfully. As sending the message is done
     // asynchronously, this is no guarantee that the message has been actually

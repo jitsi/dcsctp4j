@@ -76,6 +76,24 @@
         </profile>
     </profiles>
 
+    <dependencies>
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>jitsi-utils</artifactId>
+            <version>${jitsi.utils.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.gershnik</groupId>
+            <artifactId>smjni-jnigen-processor</artifactId>
+            <version>3.8</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.gershnik</groupId>
+            <artifactId>smjni-jnigen-annotations</artifactId>
+            <version>3.8</version>
+        </dependency>
+    </dependencies>
+
     <build>
         <plugins>
             <plugin>
@@ -108,9 +126,15 @@
                 <version>3.12.1</version>
                 <configuration>
                     <release>11</release>
-		    <compilerArgs combine.children="append">
-                        <arg>-h</arg>
-                        <arg>${project.build.directory}/native/javah/</arg>
+                    <annotationProcessors>
+                        <annotationProcessor>
+                            smjni.jnigen.Processor
+                        </annotationProcessor>
+                    </annotationProcessors>
+                    <compilerArgs combine.children="append">
+                        <arg>-Asmjni.jnigen.dest.path=${project.build.directory}/native/jnigen/</arg>
+                        <arg>-Asmjni.jnigen.expose.extra=java.time.Instant;java.lang.Long</arg>
+                        <arg>-Asmjni.jnigen.own.dest.path=true</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>

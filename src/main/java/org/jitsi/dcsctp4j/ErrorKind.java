@@ -15,6 +15,9 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.ExposeToNative;
+
+@ExposeToNative
 public enum ErrorKind {
     // Indicates that no error has occurred. This will never be the case when
     // `OnError` or `OnAborted` is called.

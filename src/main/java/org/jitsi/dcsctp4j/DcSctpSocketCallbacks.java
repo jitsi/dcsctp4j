@@ -18,6 +18,8 @@ package org.jitsi.dcsctp4j;
 import java.nio.ByteBuffer;
 import java.time.Instant;
 
+import smjni.jnigen.*;
+
 // Callbacks that the DcSctpSocket will call synchronously to the owning
 // client. It is allowed to call back into the library from callbacks that start
 // with "On". It has been explicitly documented when it's not allowed to call
@@ -25,6 +27,7 @@ import java.time.Instant;
 //
 // Theses callbacks are only synchronously triggered as a result of the client
 // calling a public method in `DcSctpSocketInterface`.
+@ExposeToNative
 public interface DcSctpSocketCallbacks {
     // Called when the library wants the packet serialized as `data` to be sent.
     //
@@ -33,12 +36,14 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
+    @CalledByNative
     default void sendPacket(ByteBuffer data) {}
 
     // Called when the library wants the packet serialized as `data` to be sent.
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
+    @CalledByNative
     default SendPacketStatus sendPacketWithStatus(
             ByteBuffer data) {
         sendPacket(data);
@@ -57,6 +62,7 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
+    @CalledByNative
     default Timeout createTimeout(DelayPrecision precision) {
         // TODO(hbos): When dependencies have migrated to this new signature, make
         // this pure virtual and delete the other version.
@@ -64,6 +70,7 @@ public interface DcSctpSocketCallbacks {
     }
     // TODO(hbos): When dependencies have migrated to the other signature, delete
     // this version.
+    @CalledByNative
     default Timeout createTimeout() {
         return createTimeout(DelayPrecision.kLow);
     }
@@ -74,6 +81,7 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
+    @CalledByNative
     default long timeMillis() { return 0; }
 
     // Returns the current time (from any epoch).
@@ -82,6 +90,7 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
+    @CalledByNative
     default Instant Now() {
         return Instant.ofEpochMilli(timeMillis());
     }
@@ -93,6 +102,7 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
+    @CalledByNative
     int getRandomInt(int low, int high);
 
     // Triggered when the outgoing message buffer is empty, meaning that there are
@@ -101,13 +111,14 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
-    @Deprecated
+    @Deprecated @CalledByNative
     default void NotifyOutgoingMessageBufferEmpty() {}
 
     // Called when the library has received an SCTP message in full and delivers
     // it to the upper layer.
     //
     // It is allowed to call into this library from within this callback.
+    @CalledByNative
     void OnMessageReceived(DcSctpMessage message);
 
     // Triggered when an non-fatal error is reported by either this library or
@@ -115,6 +126,7 @@ public interface DcSctpSocketCallbacks {
     // but no other action need to be taken as the association is still viable.
     //
     // It is allowed to call into this library from within this callback.
+    @CalledByNative
     void OnError(ErrorKind error, String message);
 
     // Triggered when the socket has aborted - either as decided by this socket
@@ -123,15 +135,17 @@ public interface DcSctpSocketCallbacks {
     // callback, unless reconnecting.
     //
     // It is allowed to call into this library from within this callback.
+    @CalledByNative
     void OnAborted(ErrorKind error, String message);
 
     // Called when calling `Connect` succeeds, but also for incoming successful
     // connection attempts.
     //
     // It is allowed to call into this library from within this callback.
+    @CalledByNative
     void OnConnected();
 
-
+    @ExposeToNative
     enum DelayPrecision {
         // This may include up to a 17 ms leeway in addition to OS timer precision.
         // See PostDelayedTask() for more information.

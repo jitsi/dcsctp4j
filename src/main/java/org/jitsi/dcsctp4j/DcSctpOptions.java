@@ -15,6 +15,9 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.ExposeToNative;
+
+@ExposeToNative
 public class DcSctpOptions {
     // TODO
 }

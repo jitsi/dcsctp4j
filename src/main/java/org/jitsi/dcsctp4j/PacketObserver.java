@@ -15,16 +15,22 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.CalledByNative;
+import smjni.jnigen.ExposeToNative;
+
 import java.nio.ByteBuffer;
 
 // A PacketObserver can be attached to a socket and will be called for
 // all sent and received packets.
+@ExposeToNative
 public interface PacketObserver {
     // Called when a packet is sent, with the current time (in milliseconds) as
     // `now`, and the packet payload as `payload`.
+    @CalledByNative
     void OnSentPacket(long now, ByteBuffer payload);
 
     // Called when a packet is received, with the current time (in milliseconds)
     // as `now`, and the packet payload as `payload`.
+    @CalledByNative
     void OnReceivedPacket(long now, ByteBuffer payload);
 }

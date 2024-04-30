@@ -15,8 +15,11 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.ExposeToNative;
+
 // Tracked metrics, which is the return value of GetMetrics. Optional members
 // will be unset when they are not yet known.
+@ExposeToNative
 public class Metrics {
     // Transmission stats and metrics.
 

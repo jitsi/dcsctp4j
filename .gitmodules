@@ -1,0 +1,3 @@
+[submodule "SimpleJNI"]
+	path = SimpleJNI
+	url = https://github.com/gershnik/SimpleJNI

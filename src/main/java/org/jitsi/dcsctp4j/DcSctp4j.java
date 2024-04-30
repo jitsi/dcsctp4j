@@ -13,17 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.jitsi.dcsctp4j;
 
-import smjni.jnigen.ExposeToNative;
+import org.jitsi.utils.JNIUtils;
+import org.jitsi.utils.logging2.Logger;
+import org.jitsi.utils.logging2.LoggerImpl;
 
-// Return value of ResetStreams.
-@ExposeToNative
-public enum ResetStreamsStatus {
-    // If the connection is not yet established, this will be returned.
-    kNotConnected,
-    // Indicates that ResetStreams operation has been successfully initiated.
-    kPerformed,
-    // Indicates that ResetStreams has failed as it's not supported by the peer.
-    kNotSupported,
+import java.lang.ref.Cleaner;
+
+public class DcSctp4j {
+    private static final Logger logger =
+            new LoggerImpl(DcSctp4j.class.getName());
+
+    static final Cleaner CLEANER = Cleaner.create();
+
+    static {
+        // Load the native library
+        try {
+            JNIUtils.loadLibrary("dcsctp4j", DcSctp4j.class.getClassLoader());
+            logger.info("DcSctp4j lib loaded");
+        } catch (Exception e) {
+            logger.error("Error loading native library: ", e);
+        }
+    }
 }

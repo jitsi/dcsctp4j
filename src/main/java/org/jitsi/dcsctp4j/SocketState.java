@@ -15,7 +15,10 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.ExposeToNative;
+
 // The socket/association state
+@ExposeToNative
 public enum SocketState {
     // The socket is closed.
     kClosed,

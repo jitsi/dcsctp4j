@@ -15,7 +15,10 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.ExposeToNative;
+
 // Return value of DcSctpSocketCallbacks::SendPacketWithStatus.
+@ExposeToNative
 public enum SendPacketStatus {
     // Indicates that the packet was successfully sent. As sending is unreliable,
     // there are no guarantees that the packet was actually delivered.

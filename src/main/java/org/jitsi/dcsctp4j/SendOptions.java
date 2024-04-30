@@ -15,7 +15,10 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.ExposeToNative;
+
 // Send options for sending messages
+@ExposeToNative
 public class SendOptions {
     // If the message should be sent with unordered message delivery.
     public boolean isUnordered = false;
