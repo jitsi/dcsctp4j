@@ -133,7 +133,7 @@
                     </annotationProcessors>
                     <compilerArgs combine.children="append">
                         <arg>-Asmjni.jnigen.dest.path=${project.build.directory}/native/jnigen/</arg>
-                        <arg>-Asmjni.jnigen.expose.extra=java.time.Instant;java.lang.Long</arg>
+                        <arg>-Asmjni.jnigen.expose.extra=java.time.Instant;java.lang.Long;java.lang.Integer</arg>
                         <arg>-Asmjni.jnigen.own.dest.path=true</arg>
                     </compilerArgs>
                 </configuration>

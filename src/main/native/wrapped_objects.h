@@ -1,6 +1,9 @@
+#ifndef WRAPPED_OBJECTS_H_
+#define WRAPPED_OBJECTS_H_
+
 #include <smjni/smjni.h>
 #include "all_classes.h"
-#include <net/dcsctp/public/dcsctp_socket_factory.h>
+#include <net/dcsctp/public/dcsctp_socket.h>
 
 class WrappedSocketCallbacks: public dcsctp::DcSctpSocketCallbacks {
   public:
@@ -61,5 +64,8 @@ class WrappedPacketObserver: public dcsctp::PacketObserver {
     virtual void OnReceivedPacket(dcsctp::TimeMs now, rtc::ArrayView<const uint8_t> payload) override;
 
   private:
+    PacketObserver_class packetObserverClass;
     smjni::global_java_ref<jPacketObserver> javaObserver;
 };
+
+#endif
