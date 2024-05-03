@@ -31,6 +31,10 @@ public class DcSctpSocketFactory {
     private long ptr;
 
     DcSctpSocketFactory() {
+        // Force load of DcSctp4j
+        if (DcSctp4j.CLEANER == null) {
+            throw new IllegalStateException();
+        }
         ptr = construct();
         long ptrCopy = ptr;
         DcSctp4j.CLEANER.register(this, () -> destruct(ptrCopy));

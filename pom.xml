@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.jitsi</groupId>
-    <artifactId>jitsi-sctp</artifactId>
+    <artifactId>jitsi-dcsctp</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>bundle</packaging>
 
     <name>Jitsi Java DCSCTP library</name>
-    <description>The Jitsi DCSCTP library is a Java wrapper around the dcsctp userspace SCTP library.</description>
-    <url>https://github.com/jitsi/sctp4j</url>
+    <description>The Jitsi DCSCTP library is a Java wrapper around the DCSCTP userspace SCTP library.</description>
+    <url>https://github.com/jitsi/dcsctp4j</url>
 
     <organization>
         <name>jitsi.org</name>
@@ -92,6 +92,12 @@
             <artifactId>smjni-jnigen-annotations</artifactId>
             <version>3.8</version>
         </dependency>
+      <dependency>
+        <groupId>org.junit.jupiter</groupId>
+        <artifactId>junit-jupiter-engine</artifactId>
+        <version>5.10.2</version>
+        <scope>test</scope>
+      </dependency>
     </dependencies>
 
     <build>
