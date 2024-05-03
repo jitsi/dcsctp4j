@@ -144,18 +144,29 @@ public class DcSctpSocketFactory {
 
         @Override
         public List<SendStatus> sendMany(List<DcSctpMessage> messages, SendOptions options) {
-            int[] nativeStatuses = sendMany_(ptr, messages.toArray(), options);
+            int[] nativeStatuses = sendMany_(ptr, messages.toArray(new DcSctpMessage[0]), options);
             return Arrays.stream(nativeStatuses).mapToObj(SendStatus::fromNativeStatus).collect(Collectors.toList());
         }
 
-        private native int[] sendMany_(long ptr, Object[] array, SendOptions options);
+        private native int[] sendMany_(long ptr, DcSctpMessage[] messages, SendOptions options);
+
+        /* Streams API doesn't include ShortStream, so do this manually. */
+        private short[] unboxList(List<Short> l)
+        {
+            short[] ret = new short[l.size()];
+            int idx = 0;
+            for (short s: l) {
+                ret[idx++] = s;
+            }
+            return ret;
+        }
 
         @Override
         public ResetStreamsStatus resetStreams(List<Short> outgoingStreams) {
-            return resetStreams_(ptr, outgoingStreams.toArray());
+            return resetStreams_(ptr, unboxList(outgoingStreams));
         }
 
-        private native ResetStreamsStatus resetStreams_(long ptr, Object[] array);
+        private native ResetStreamsStatus resetStreams_(long ptr, short[] outgoingStreams);
 
         @Override
         public long bufferedAmount(short streamId) {

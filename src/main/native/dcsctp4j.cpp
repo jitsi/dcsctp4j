@@ -2,6 +2,7 @@
 #include "all_classes.h"
 #include <net/dcsctp/public/dcsctp_socket_factory.h>
 #include "wrapped_objects.h"
+#include "native_sctp_socket.h"
 #include "dcsctp4j.h"
 
 using namespace smjni;
@@ -18,7 +19,6 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
 
         NATIVE_PROLOG
             java_classes::init(env);
-	    Util::init(env);
             return JNI_VERSION_1_6;
         NATIVE_EPILOG
     }
@@ -49,14 +49,14 @@ NATIVE_PROLOG
 NATIVE_EPILOG
 }
    
-jlong JNICALL create_(JNIEnv *env, jDcSctpSocketFactory, jlong ptr, jstring jLogPrefix, jDcSctpSocketCallbacks jCallbacks, jPacketObserver jPacketObserver, jDcSctpOptions jOptions) 
+jlong JNICALL DcSctpSocketFactory_class::create_(JNIEnv *env, jDcSctpSocketFactory, jlong ptr, jstring jLogPrefix, jDcSctpSocketCallbacks jCallbacks, jPacketObserver jPacketObserver, jDcSctpOptions jOptions)
 {
 NATIVE_PROLOG
     auto factory = (DcSctpSocketFactory*)(intptr_t)ptr;
 
     string logPrefix = java_string_to_cpp(env, jLogPrefix);
 
-    WrappedSocketCallbacks socketCallbacks(jCallbacks);
+    auto nativeSocket = make_unique<NativeSctpSocket>(jCallbacks);
 
     unique_ptr<PacketObserver> packetObserver;
     if (jPacketObserver != nullptr) {
@@ -68,7 +68,8 @@ NATIVE_PROLOG
     
     DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
 
-    auto socket = factory->Create(logPrefix, socketCallbacks, std::move(packetObserver), *options);
-    return 0;
+    nativeSocket->socket = factory->Create(logPrefix, nativeSocket->callbacks, std::move(packetObserver), *options);
+
+    return (jlong)(intptr_t)nativeSocket.release();
 NATIVE_EPILOG_Z
 }

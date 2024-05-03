@@ -13,7 +13,7 @@ class WrappedSocketCallbacks: public dcsctp::DcSctpSocketCallbacks {
     virtual void SendPacket(rtc::ArrayView<const uint8_t> data) override;
 
     virtual dcsctp::SendPacketStatus SendPacketWithStatus(
-        rtc::ArrayView<const uint8_t> data) override;;
+        rtc::ArrayView<const uint8_t> data) override;
 
     virtual std::unique_ptr<dcsctp::Timeout> CreateTimeout(
         webrtc::TaskQueueBase::DelayPrecision precision) override;
@@ -53,6 +53,7 @@ class WrappedSocketCallbacks: public dcsctp::DcSctpSocketCallbacks {
     /* Not currently implementing lifecycle events, take the default no-op implementations. */
     
   private:
+    DcSctpSocketCallbacks_class socketCallbacksClass;
     smjni::global_java_ref<jDcSctpSocketCallbacks> socketCallbacks;
 };
 

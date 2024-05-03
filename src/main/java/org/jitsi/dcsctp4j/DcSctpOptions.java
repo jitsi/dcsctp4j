@@ -23,10 +23,16 @@ public class DcSctpOptions {
     @CalledByNative
     private final long ptr;
 
-    DcSctpOptions() {
-        ptr = construct();
-        long ptrCopy = ptr;
-        DcSctp4j.CLEANER.register(this, () -> destruct(ptrCopy));
+    public DcSctpOptions()
+    {
+        this(construct());
+    }
+
+    @CalledByNative
+    private DcSctpOptions(long ptr)
+    {
+        this.ptr = ptr;
+        DcSctp4j.CLEANER.register(this, () -> destruct(ptr));
     }
 
     private static native long construct();

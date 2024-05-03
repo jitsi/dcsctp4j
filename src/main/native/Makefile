@@ -15,8 +15,8 @@ LDFLAGS=-L${WebRTC_OBJ} -L${SimpleJNI_OBJ}
 
 LIBS=-lsmjni -ldcsctp
 
-libdcsctp4j.dylib: dcsctp4j.o wrapped_objects.o mapped_objects.o
-	$(CXX) -shared -o $@ ${LDFLAGS} ${LIBS}
+libdcsctp4j.dylib: dcsctp4j.o wrapped_objects.o mapped_objects.o native_sctp_socket.o enum_classes.o
+	$(CXX) -shared -o $@ $+ ${LDFLAGS} ${LIBS}
 
 .PHONY: clean
 

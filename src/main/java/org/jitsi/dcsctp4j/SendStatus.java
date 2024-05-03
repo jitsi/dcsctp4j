@@ -35,7 +35,7 @@ public enum SendStatus {
     // The message could not be sent as the socket is shutting down.
     kErrorShuttingDown(4);
 
-    private int nativeStatus;
+    public final int nativeStatus;
 
     SendStatus(int n) {
         nativeStatus = n;

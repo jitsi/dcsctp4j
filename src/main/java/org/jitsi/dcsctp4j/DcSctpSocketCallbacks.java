@@ -43,11 +43,16 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
-    @CalledByNative
     default SendPacketStatus sendPacketWithStatus(
             ByteBuffer data) {
         sendPacket(data);
         return SendPacketStatus.kSuccess;
+    }
+
+    // Version of sendPacketWithStatus optimizing JNI
+    @CalledByNative
+    default int sendPacketWithStatus_(ByteBuffer data) {
+        return sendPacketWithStatus(data).nativeStatus;
     }
 
     // Called when the library wants to create a Timeout. The callback must return
@@ -70,7 +75,6 @@ public interface DcSctpSocketCallbacks {
     }
     // TODO(hbos): When dependencies have migrated to the other signature, delete
     // this version.
-    @CalledByNative
     default Timeout createTimeout() {
         return createTimeout(DelayPrecision.kLow);
     }
@@ -111,7 +115,7 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
-    @Deprecated @CalledByNative
+    @Deprecated
     default void NotifyOutgoingMessageBufferEmpty() {}
 
     // Called when the library has received an SCTP message in full and delivers
@@ -120,6 +124,15 @@ public interface DcSctpSocketCallbacks {
     // It is allowed to call into this library from within this callback.
     @CalledByNative
     void OnMessageReceived(DcSctpMessage message);
+
+    // Version of OnMessageReceived optimizing JNI
+    @CalledByNative
+    default void OnMessageReceived_(ByteBuffer payload, int ppid, short streamID)
+    {
+        DcSctpMessage message = new DcSctpMessage(streamID, ppid, payload);
+        OnMessageReceived(message);
+    }
+
 
     // Triggered when an non-fatal error is reported by either this library or
     // from the other peer (by sending an ERROR command). These should be logged,
@@ -144,6 +157,60 @@ public interface DcSctpSocketCallbacks {
     // It is allowed to call into this library from within this callback.
     @CalledByNative
     void OnConnected();
+
+    // Called when the socket is closed in a controlled way. No other
+    // callbacks will be done after this callback, unless reconnecting.
+    //
+    // It is allowed to call into this library from within this callback.
+    @CalledByNative
+    void OnClosed();
+
+    // On connection restarted (by peer). This is just a notification, and the
+    // association is expected to work fine after this call, but there could have
+    // been packet loss as a result of restarting the association.
+    //
+    // It is allowed to call into this library from within this callback.
+    @CalledByNative
+    void OnConnectionRestarted();
+
+    // Indicates that a stream reset request has failed.
+    //
+    // It is allowed to call into this library from within this callback.
+    @CalledByNative
+    void OnStreamsResetFailed(
+            short[] outgoing_streams,
+            String reason);
+
+    // Indicates that a stream reset request has been performed.
+    //
+    // It is allowed to call into this library from within this callback.
+    @CalledByNative
+    void OnStreamsResetPerformed(
+            short[] outgoing_streams);
+
+    // When a peer has reset some of its outgoing streams, this will be called. An
+    // empty list indicates that all streams have been reset.
+    //
+    // It is allowed to call into this library from within this callback.
+    @CalledByNative
+    void OnIncomingStreamsReset(
+            short[] incoming_streams);
+
+    // Will be called when the amount of data buffered to be sent falls to or
+    // below the threshold set when calling `SetBufferedAmountLowThreshold`.
+    //
+    // It is allowed to call into this library from within this callback.
+    @CalledByNative
+    default void OnBufferedAmountLow(short stream_id) {}
+
+    // Will be called when the total amount of data buffered (in the entire send
+    // buffer, for all streams) falls to or below the threshold specified in
+    // `DcSctpOptions::total_buffered_amount_low_threshold`.
+    @CalledByNative
+    default void OnTotalBufferedAmountLow() {}
+
+    /* Omitting lifecycle events for now. */
+
 
     @ExposeToNative
     enum DelayPrecision {

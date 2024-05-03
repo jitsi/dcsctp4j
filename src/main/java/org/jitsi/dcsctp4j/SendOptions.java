@@ -15,26 +15,31 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 // Send options for sending messages
 @ExposeToNative
 public class SendOptions {
     // If the message should be sent with unordered message delivery.
+    @CalledByNative
     public boolean isUnordered = false;
 
     // If set, will discard messages that haven't been correctly sent and
     // received before the lifetime has expired. This is only available if the
     // peer supports Partial Reliability Extension (RFC3758).
+    @CalledByNative
     Long lifetime = null;
 
     // If set, limits the number of retransmissions. This is only available
     // if the peer supports Partial Reliability Extension (RFC3758).
+    @CalledByNative
     Long maxRetransmissions = null;
 
     // If set, will generate lifecycle events for this message. See e.g.
     // `DcSctpSocketCallbacks::OnLifecycleMessageFullySent`. This value is decided
     // by the client and the library will provide it to all lifecycle callbacks.
+    @CalledByNative
     long lifecycleId = LIFECYCLE_NOT_SET;
 
     static final long LIFECYCLE_NOT_SET = 0;

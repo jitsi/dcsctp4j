@@ -15,6 +15,7 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 import java.nio.ByteBuffer;
@@ -32,16 +33,19 @@ public class DcSctpMessage {
     }
 
     // The stream identifier to which the message is sent.
+    @CalledByNative
     public short getStreamID() {
         return streamID;
     }
 
     // The payload protocol identifier (ppid) associated with the message.
+    @CalledByNative
     public int getPpid() {
         return ppid;
     }
 
     // The payload of the message.
+    @CalledByNative
     public ByteBuffer getPayload() {
         return payload;
     }

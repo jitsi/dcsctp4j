@@ -22,11 +22,17 @@ import smjni.jnigen.ExposeToNative;
 public enum SendPacketStatus {
     // Indicates that the packet was successfully sent. As sending is unreliable,
     // there are no guarantees that the packet was actually delivered.
-    kSuccess,
+    kSuccess(0),
     // The packet was not sent due to a temporary failure, such as the local send
     // buffer becoming exhausted. This return value indicates that the socket will
     // recover and sending that packet can be retried at a later time.
-    kTemporaryFailure,
+    kTemporaryFailure(1),
     // The packet was not sent due to other reasons.
-    kError,
+    kError(2);
+
+    public final int nativeStatus;
+
+    SendPacketStatus(int n) {
+        nativeStatus = n;
+    }
 }
