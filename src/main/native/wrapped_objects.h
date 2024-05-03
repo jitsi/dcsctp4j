@@ -69,4 +69,17 @@ class WrappedPacketObserver: public dcsctp::PacketObserver {
     smjni::global_java_ref<jPacketObserver> javaObserver;
 };
 
+class WrappedTimeout: public dcsctp::Timeout {
+public:
+    WrappedTimeout(jTimeout);
+    virtual ~WrappedTimeout() = default;
+    virtual void Start(dcsctp::DurationMs duration, dcsctp::TimeoutID timeout_id) override;
+    virtual void Stop() override;
+    virtual void Restart(dcsctp::DurationMs duration, dcsctp::TimeoutID timeout_id) override;
+
+private:
+    Timeout_class timeoutClass;
+    smjni::global_java_ref<jTimeout> timeout;
+};
+
 #endif

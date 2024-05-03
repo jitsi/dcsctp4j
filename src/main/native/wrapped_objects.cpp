@@ -28,6 +28,37 @@ void WrappedPacketObserver::OnReceivedPacket(TimeMs now, rtc::ArrayView<const ui
 }
 
 
+WrappedTimeout::WrappedTimeout(jTimeout timeout) :
+    timeoutClass(java_classes::get<Timeout_class>()),
+    timeout(jglobal_ref(timeout))
+{
+}
+
+void WrappedTimeout::Start(DurationMs duration, TimeoutID timeout_id)
+{
+    JNIEnv* env = jni_provider::get_jni();
+
+    timeoutClass.start(env, timeout, *duration, *timeout_id);
+}
+
+
+void WrappedTimeout::Stop()
+{
+    JNIEnv* env = jni_provider::get_jni();
+
+    timeoutClass.stop(env, timeout);
+}
+
+
+void WrappedTimeout::Restart(DurationMs duration, TimeoutID timeout_id)
+{
+    JNIEnv* env = jni_provider::get_jni();
+
+    timeoutClass.restart(env, timeout, *duration, *timeout_id);
+}
+
+
+
 WrappedSocketCallbacks::WrappedSocketCallbacks(jDcSctpSocketCallbacks callbacks) :
     socketCallbacksClass(java_classes::get<DcSctpSocketCallbacks_class>()),
     socketCallbacks(jglobal_ref(callbacks))
@@ -58,8 +89,12 @@ SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
 std::unique_ptr<Timeout> WrappedSocketCallbacks::CreateTimeout(
         webrtc::TaskQueueBase::DelayPrecision precision)
 {
-    /* TODO */
-    return nullptr;
+    JNIEnv* env = jni_provider::get_jni();
+
+    auto timeout = socketCallbacksClass.createTimeout(env, socketCallbacks,
+                                                      java_classes::get<DelayPrecision_class>().map(env, precision));
+
+    return make_unique<WrappedTimeout>(timeout.c_ptr());
 }
 
 TimeMs WrappedSocketCallbacks::TimeMillis()

@@ -10,6 +10,25 @@ template <typename E> global_java_ref<E> enum_field(JNIEnv* env, java_class<E> c
     return field.get(env, clazz);
 }
 
+DelayPrecision_class::DelayPrecision_class(JNIEnv * env) :
+    simple_java_class(env),
+    m_kLow(enum_field<jDcSctpSocketCallbacks_DelayPrecision>(env, *this, "kLow")),
+    m_kHigh(enum_field<jDcSctpSocketCallbacks_DelayPrecision>(env, *this, "kHigh"))
+{}
+
+jDcSctpSocketCallbacks_DelayPrecision DelayPrecision_class::map(JNIEnv * env, webrtc::TaskQueueBase::DelayPrecision delayPrecision) const
+{
+    switch (delayPrecision) {
+    case webrtc::TaskQueueBase::DelayPrecision::kLow:
+        return kLow();
+    case webrtc::TaskQueueBase::DelayPrecision::kHigh:
+        return kHigh();
+    default:
+        auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Invalid value for DelayPrecision"));
+        throw java_exception(ex);
+    }
+}
+
 
 ErrorKind_class::ErrorKind_class(JNIEnv * env) :
     simple_java_class(env),

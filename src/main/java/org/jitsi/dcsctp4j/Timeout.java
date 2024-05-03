@@ -15,6 +15,7 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 // A very simple timeout that can be started and stopped. When started,
@@ -28,6 +29,7 @@ public interface Timeout {
     //
     // `Start` and `Stop` will always be called in pairs. In other words will
     // ´Start` never be called twice, without a call to `Stop` in between.
+    @CalledByNative
     void start(long duration, long timeoutId);
 
     // Called to stop the running timeout.
@@ -36,11 +38,13 @@ public interface Timeout {
     // ´Start` never be called twice, without a call to `Stop` in between.
     //
     // `Stop` will always be called prior to releasing this object.
+    @CalledByNative
     void stop();
 
     // Called to restart an already running timeout, with the `duration` and
     // `timeout_id` parameters as described in `Start`. This can be overridden by
     // the implementation to restart it more efficiently.
+    @CalledByNative
     default void restart(long durationMs, long timeoutId) {
         stop();
         start(durationMs, timeoutId);

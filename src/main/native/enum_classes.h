@@ -8,6 +8,22 @@
 
 template <typename E> smjni::global_java_ref<E> enum_field(JNIEnv* env, smjni::java_class<E> clazz, const char* name);
 
+class DelayPrecision_class : public smjni::java_runtime::simple_java_class<jDcSctpSocketCallbacks_DelayPrecision>
+{
+public:
+    DelayPrecision_class(JNIEnv * env);
+
+    jDcSctpSocketCallbacks_DelayPrecision kLow() const { return m_kLow.c_ptr(); }
+    jDcSctpSocketCallbacks_DelayPrecision kHigh() const { return m_kHigh.c_ptr(); }
+
+private:
+    smjni::global_java_ref<jDcSctpSocketCallbacks_DelayPrecision> m_kLow;
+    smjni::global_java_ref<jDcSctpSocketCallbacks_DelayPrecision> m_kHigh;
+
+public:
+    jDcSctpSocketCallbacks_DelayPrecision map(JNIEnv *, webrtc::TaskQueueBase::DelayPrecision) const;
+};
+
 class ErrorKind_class : public smjni::java_runtime::simple_java_class<jErrorKind>
 {
 public:
@@ -119,5 +135,5 @@ public:
     jSocketState map(JNIEnv*, dcsctp::SocketState) const;
 };
 
-#define ENUM_CLASSES ErrorKind_class, ResetStreamsStatus_class, SendPacketStatus_class, SendStatus_class, SocketState_class
+#define ENUM_CLASSES DelayPrecision_class, ErrorKind_class, ResetStreamsStatus_class, SendPacketStatus_class, SendStatus_class, SocketState_class
 #endif
