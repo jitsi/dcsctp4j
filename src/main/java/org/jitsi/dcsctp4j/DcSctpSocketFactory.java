@@ -16,9 +16,6 @@
 
 package org.jitsi.dcsctp4j;
 
-import org.jitsi.utils.JNIUtils;
-import org.jitsi.utils.logging2.Logger;
-import org.jitsi.utils.logging2.LoggerImpl;
 import smjni.jnigen.ExposeToNative;
 
 import java.nio.ByteBuffer;
