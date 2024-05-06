@@ -32,6 +32,15 @@ public class DcSctpMessage {
         payload = pay;
     }
 
+    DcSctpMessage(short s, int p, byte[] pay)
+    {
+        streamID = s;
+        ppid = p;
+        payload = ByteBuffer.allocateDirect(pay.length);
+        payload.put(pay);
+        payload.flip();
+    }
+
     // The stream identifier to which the message is sent.
     @CalledByNative
     public short getStreamID() {
