@@ -148,6 +148,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
+                  <systemPropertyVariables>
+                    <java.util.logging.config.file>${project.build.testSourceDirectory}/../resources/logging.properties</java.util.logging.config.file>
+                  </systemPropertyVariables>
                 </configuration>
             </plugin>
             <plugin>
