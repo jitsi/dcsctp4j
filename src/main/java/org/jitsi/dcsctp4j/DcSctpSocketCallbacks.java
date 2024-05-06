@@ -107,7 +107,7 @@ public interface DcSctpSocketCallbacks {
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
     @CalledByNative
-    int getRandomInt(int low, int high);
+    long getRandomInt(long low, long high);
 
     // Triggered when the outgoing message buffer is empty, meaning that there are
     // no more queued messages, but there can still be packets in-flight or to be
