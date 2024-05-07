@@ -44,7 +44,7 @@ public class DcSctp4jTest {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
         Logger logger = new LoggerImpl("testSocketCreate");
-        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger);
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null);
         DcSctpOptions options = new DcSctpOptions();
 
         wrapper.socket = factory.create("testSocketCreate", callbacks, null, options);
@@ -64,36 +64,10 @@ public class DcSctp4jTest {
         Logger serverLogger = new LoggerImpl(this.getClass().getName() + ".simpleConnectionServer");
         serverLogger.addContext("name", "simpleConnectionServer");
 
-        TestCallbacks clientCallbacks = new TestCallbacks(client, Clock.systemUTC(), clientLogger) {
-            @Override
-            public SendPacketStatus sendPacketWithStatus(ByteBuffer data) {
-                super.sendPacketWithStatus(data);
-                ByteBuffer clone = cloneByteBuffer(data);
-                try {
-                    executor.submit(() -> server.socket.receivePacket(clone));
-                }
-                catch (Exception e) {
-                    clientLogger.error("Error submitting packet to server", e);
-                    return SendPacketStatus.kError;
-                }
-                return SendPacketStatus.kSuccess;
-            }
-        };
-        TestCallbacks serverCallbacks = new TestCallbacks(client, Clock.systemUTC(), serverLogger) {
-            @Override
-            public SendPacketStatus sendPacketWithStatus(ByteBuffer data) {
-                super.sendPacketWithStatus(data);
-                ByteBuffer clone = cloneByteBuffer(data);
-                try {
-                    executor.submit(() -> client.socket.receivePacket(clone));
-                }
-                catch (Exception e) {
-                    serverLogger.error("Error submitting packet to client", e);
-                    return SendPacketStatus.kError;
-                }
-                return SendPacketStatus.kSuccess;
-            }
-        };
+        TestCallbacks clientCallbacks =
+                new TestCallbacks(client, Clock.systemUTC(), clientLogger, server);
+        TestCallbacks serverCallbacks =
+                new TestCallbacks(client, Clock.systemUTC(), serverLogger, client);
         DcSctpOptions options = new DcSctpOptions();
 
         server.socket =
@@ -113,24 +87,12 @@ public class DcSctp4jTest {
             Thread.sleep(1000);
         } catch (InterruptedException ignored) {
         }
-        client.socket.close();
+        client.socket.shutdown();
         try {
             Thread.sleep(100);
         } catch (InterruptedException ignored) {
         }
     }
-
-    public static ByteBuffer cloneByteBuffer(final ByteBuffer original) {
-        // Create clone with same capacity as original.
-        final ByteBuffer clone = (original.isDirect()) ?
-                ByteBuffer.allocateDirect(original.capacity()) :
-                ByteBuffer.allocate(original.capacity());
-
-        clone.put(original);
-
-        return clone;
-    }
-
 }
 
 
@@ -172,17 +134,46 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     private final SocketWrapper wrapper;
     private final Logger logger;
 
-    public TestCallbacks(SocketWrapper wrapper, Clock clock, Logger logger)
+    private final SocketWrapper dest;
+
+    public TestCallbacks(SocketWrapper wrapper, Clock clock, Logger logger, SocketWrapper dest)
     {
         this.wrapper = wrapper;
         this.clock = clock;
         this.logger = logger;
+        this.dest = dest;
+    }
+
+    public static ByteBuffer cloneByteBuffer(final ByteBuffer original) {
+        // Create clone with same capacity as original.
+        final ByteBuffer clone = (original.isDirect()) ?
+                ByteBuffer.allocateDirect(original.capacity()) :
+                ByteBuffer.allocate(original.capacity());
+
+        clone.put(original);
+
+        return clone;
     }
 
     @Override
     public SendPacketStatus sendPacketWithStatus(ByteBuffer data) {
         logger.info("Sending " + data.limit() + " byte packet");
-        return SendPacketStatus.kTemporaryFailure;
+        if (dest == null) {
+            return SendPacketStatus.kError;
+        }
+        if (dest.socket == null) {
+            return SendPacketStatus.kTemporaryFailure;
+        }
+        ByteBuffer clone = cloneByteBuffer(data);
+        try {
+            DcSctp4jTest.executor.submit(() -> dest.socket.receivePacket(clone));
+        }
+        catch (Exception e) {
+            logger.error("Error submitting packet", e);
+            return SendPacketStatus.kError;
+        }
+        return SendPacketStatus.kSuccess;
+
     }
 
     @Override
