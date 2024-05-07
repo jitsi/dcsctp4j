@@ -156,17 +156,16 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     }
 
     @Override
-    public SendPacketStatus sendPacketWithStatus(ByteBuffer data) {
-        logger.info("Sending " + data.limit() + " byte packet");
+    public SendPacketStatus sendPacketWithStatus(byte[] data) {
+        logger.info("Sending " + data.length + " byte packet");
         if (dest == null) {
             return SendPacketStatus.kError;
         }
         if (dest.socket == null) {
             return SendPacketStatus.kTemporaryFailure;
         }
-        ByteBuffer clone = cloneByteBuffer(data);
         try {
-            DcSctp4jTest.executor.submit(() -> dest.socket.receivePacket(clone));
+            DcSctp4jTest.executor.submit(() -> dest.socket.receivePacket(data));
         }
         catch (Exception e) {
             logger.error("Error submitting packet", e);
@@ -193,7 +192,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
 
     @Override
     public void OnMessageReceived(DcSctpMessage message) {
-        String s = StandardCharsets.UTF_8.decode(message.getPayload()).toString();
+        String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
         logger.info("Message received: " +
                 "streamID " + message.getStreamID() +

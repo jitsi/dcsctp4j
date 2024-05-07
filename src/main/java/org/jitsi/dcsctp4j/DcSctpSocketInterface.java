@@ -15,12 +15,11 @@
  */
 package org.jitsi.dcsctp4j;
 
-import java.nio.ByteBuffer;
 import java.util.List;
 
 public interface DcSctpSocketInterface {
     /** To be called when an incoming SCTP packet is to be processed. */
-    void receivePacket(ByteBuffer data);
+    void receivePacket(byte[] data);
 
     /** To be called when a timeout has expired. The [timeout_id] is provided
      when the timeout was initiated. */

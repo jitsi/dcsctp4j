@@ -15,7 +15,6 @@
  */
 package org.jitsi.dcsctp4j;
 
-import java.nio.ByteBuffer;
 import java.time.Instant;
 
 import smjni.jnigen.*;
@@ -37,21 +36,21 @@ public interface DcSctpSocketCallbacks {
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
     @CalledByNative
-    default void sendPacket(ByteBuffer data) {}
+    default void sendPacket(byte[] data) {}
 
     // Called when the library wants the packet serialized as `data` to be sent.
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
     default SendPacketStatus sendPacketWithStatus(
-            ByteBuffer data) {
+            byte[] data) {
         sendPacket(data);
         return SendPacketStatus.kSuccess;
     }
 
     // Version of sendPacketWithStatus optimizing JNI
     @CalledByNative
-    default int sendPacketWithStatus_(ByteBuffer data) {
+    default int sendPacketWithStatus_(byte[] data) {
         return sendPacketWithStatus(data).nativeStatus;
     }
 
@@ -127,7 +126,7 @@ public interface DcSctpSocketCallbacks {
 
     // Version of OnMessageReceived optimizing JNI
     @CalledByNative
-    default void OnMessageReceived_(ByteBuffer payload, int ppid, short streamID)
+    default void OnMessageReceived_(byte[] payload, int ppid, short streamID)
     {
         DcSctpMessage message = new DcSctpMessage(streamID, ppid, payload);
         OnMessageReceived(message);

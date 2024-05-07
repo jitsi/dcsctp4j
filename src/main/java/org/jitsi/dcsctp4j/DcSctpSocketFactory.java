@@ -18,14 +18,13 @@ package org.jitsi.dcsctp4j;
 
 import smjni.jnigen.ExposeToNative;
 
-import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @ExposeToNative
 public class DcSctpSocketFactory {
-    private long ptr;
+    private final long ptr;
 
     DcSctpSocketFactory() {
         // Force load of DcSctp4j
@@ -67,12 +66,12 @@ public class DcSctpSocketFactory {
         }
 
         @Override
-        public void receivePacket(ByteBuffer data)
+        public void receivePacket(byte[] data)
         {
             receivePacket_(ptr, data);
         }
 
-        private native void receivePacket_(long ptr, ByteBuffer data);
+        private native void receivePacket_(long ptr, byte[] data);
 
         @Override
         public void handleTimeout(long timeoutId)
@@ -133,7 +132,7 @@ public class DcSctpSocketFactory {
 
         @Override
         public SendStatus send(DcSctpMessage message, SendOptions options) {
-            /* This is expected to be the most common method, so unwrap the java objects to minimize the JNI
+            /* This is expected to be one of the most common methods, so unwrap the java objects to minimize the JNI
              * overhead */
             int nativeStatus = send_(ptr,
                     message.getPayload(), message.getPpid(), message.getStreamID(),
@@ -141,7 +140,7 @@ public class DcSctpSocketFactory {
             return SendStatus.fromNativeStatus(nativeStatus);
         }
 
-        private native int send_(long ptr, ByteBuffer payload, int ppid, short streamID, boolean isUnordered, Long lifetime, Long maxRetransmissions, long lifecycleId);
+        private native int send_(long ptr, byte[] payload, int ppid, short streamID, boolean isUnordered, Long lifetime, Long maxRetransmissions, long lifecycleId);
 
         @Override
         public List<SendStatus> sendMany(List<DcSctpMessage> messages, SendOptions options) {

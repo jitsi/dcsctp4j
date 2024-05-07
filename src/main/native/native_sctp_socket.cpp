@@ -14,12 +14,13 @@ NativeSctpSocket::NativeSctpSocket(jDcSctpSocketCallbacks jCallbacks) :
 }
 
 
-void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::receivePacket_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jByteBuffer data)
+void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::receivePacket_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray data)
 {
 NATIVE_PROLOG
     auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
-    auto bData = java_direct_buffer<const uint8_t>(env, data);
-    auto vData = rtc::ArrayView<const uint8_t>(bData.data(), bData.size());
+    java_array_access aData(env, data);
+    auto vData = vector<uint8_t>(aData.cbegin(), aData.cend());
+    auto dataView = rtc::ArrayView<const uint8_t>(vData.data(), vData.size());
     nativeSocket->socket->ReceivePacket(vData);
 NATIVE_EPILOG
 }
@@ -100,13 +101,13 @@ NATIVE_EPILOG_Z
 }
 
 
-jint JNICALL DcSctpSocketFactory_NativeSctpSocket_class::send_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jByteBuffer payload, jint ppid, jshort streamID, jboolean isUnordered, jLong lifetime, jLong maxRetransmissions, jlong lifecycleId)
+jint JNICALL DcSctpSocketFactory_NativeSctpSocket_class::send_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray payload, jint ppid, jshort streamID, jboolean isUnordered, jLong lifetime, jLong maxRetransmissions, jlong lifecycleId)
 {
 NATIVE_PROLOG
     auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
 
-    auto bPayload = java_direct_buffer<const uint8_t>(env, payload);
-    vector<uint8_t> vPayload(bPayload.begin(), bPayload.end());
+    java_array_access aPayload(env, payload);
+    vector<uint8_t> vPayload(aPayload.cbegin(), aPayload.cend());
 
     auto message = DcSctpMessage(StreamID(streamID), PPID(ppid), vPayload);
 
@@ -212,8 +213,8 @@ DcSctpMessage convertDcSctpMessage(JNIEnv* env, jDcSctpMessage jmessage)
     auto messageClass = java_classes::get<DcSctpMessage_class>();
 
     auto payload = messageClass.getPayload(env, jmessage);
-    auto bPayload = java_direct_buffer<const uint8_t>(env, payload);
-    vector<uint8_t> vPayload(bPayload.begin(), bPayload.end());
+    java_array_access aPayload(env, payload);
+    vector<uint8_t> vPayload(aPayload.cbegin(), aPayload.cend());
 
     auto streamID = messageClass.getStreamID(env, jmessage);
     auto ppid = messageClass.getPpid(env, jmessage);

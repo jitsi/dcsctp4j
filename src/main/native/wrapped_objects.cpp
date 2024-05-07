@@ -15,16 +15,24 @@ void WrappedPacketObserver::OnSentPacket(TimeMs now, rtc::ArrayView<const uint8_
 {
     JNIEnv* env = jni_provider::get_jni();
     
-    java_direct_buffer<uint8_t> byteBufferPayload(const_cast<uint8_t*>(payload.data()), payload.size());
-    packetObserverClass.OnSentPacket(env, javaObserver, (jlong)*now, byteBufferPayload.to_java(env));
+    auto jPayload = java_array_create<jbyte>(env, payload.size());
+    auto aPayload = java_array_access(env, jPayload);
+    copy(payload.cbegin(), payload.cend(), aPayload.begin());
+    aPayload.commit();
+
+    packetObserverClass.OnSentPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
 }
 
 void WrappedPacketObserver::OnReceivedPacket(TimeMs now, rtc::ArrayView<const uint8_t> payload)
 {
     JNIEnv* env = jni_provider::get_jni();
     
-    java_direct_buffer<uint8_t> byteBufferPayload(const_cast<uint8_t*>(payload.data()), payload.size());
-    packetObserverClass.OnReceivedPacket(env, javaObserver, (jlong)*now, byteBufferPayload.to_java(env));
+    auto jPayload = java_array_create<jbyte>(env, payload.size());
+    auto aPayload = java_array_access(env, jPayload);
+    copy(payload.cbegin(), payload.cend(), aPayload.begin());
+    aPayload.commit();
+
+    packetObserverClass.OnReceivedPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
 }
 
 
@@ -70,8 +78,12 @@ void WrappedSocketCallbacks::SendPacket(rtc::ArrayView<const uint8_t> data)
 {
     JNIEnv* env = jni_provider::get_jni();
 
-    java_direct_buffer<uint8_t> byteBufferData(const_cast<uint8_t*>(data.data()), data.size());
-    socketCallbacksClass.sendPacket(env, socketCallbacks, byteBufferData.to_java(env));
+    auto jData = java_array_create<jbyte>(env, data.size());
+    auto aData = java_array_access(env, jData);
+    copy(data.cbegin(), data.cend(), aData.begin());
+    aData.commit();
+
+    socketCallbacksClass.sendPacket(env, socketCallbacks, jData.c_ptr());
 }
 
 SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
@@ -79,9 +91,12 @@ SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
 {
     JNIEnv* env = jni_provider::get_jni();
 
-    java_direct_buffer<uint8_t> byteBufferData(const_cast<uint8_t*>(data.data()), data.size());
+    auto jData = java_array_create<jbyte>(env, data.size());
+    auto aData = java_array_access(env, jData);
+    copy(data.cbegin(), data.cend(), aData.begin());
+    aData.commit();
 
-    jint status = socketCallbacksClass.sendPacketWithStatus_(env, socketCallbacks, byteBufferData.to_java(env));
+    jint status = socketCallbacksClass.sendPacketWithStatus_(env, socketCallbacks, jData.c_ptr());
 
     return SendPacketStatus(status);
 }
@@ -124,9 +139,13 @@ void WrappedSocketCallbacks::OnMessageReceived(DcSctpMessage message)
 {
     JNIEnv* env = jni_provider::get_jni();
 
-    java_direct_buffer<uint8_t> payload(const_cast<uint8_t*>(message.payload().data()), message.payload().size());
+    auto payload = message.payload();
+    auto jPayload = java_array_create<jbyte>(env, payload.size());
+    auto aPayload = java_array_access(env, jPayload);
+    copy(payload.cbegin(), payload.cend(), aPayload.begin());
+    aPayload.commit();
 
-    socketCallbacksClass.OnMessageReceived_(env, socketCallbacks, payload.to_java(env), *message.ppid(), *message.stream_id());
+    socketCallbacksClass.OnMessageReceived_(env, socketCallbacks, jPayload.c_ptr(), *message.ppid(), *message.stream_id());
 }
 
 void WrappedSocketCallbacks::OnError(ErrorKind error, absl::string_view message)

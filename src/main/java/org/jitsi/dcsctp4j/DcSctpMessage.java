@@ -18,27 +18,16 @@ package org.jitsi.dcsctp4j;
 import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
-import java.nio.ByteBuffer;
-
 // An SCTP message is a group of bytes sent and received as a whole on a
 // specified stream identifier (`stream_id`), and with a payload protocol
 // identifier (`ppid`).
 @ExposeToNative
 public class DcSctpMessage {
-    DcSctpMessage(short s, int p, ByteBuffer pay)
-    {
-        streamID = s;
-        ppid = p;
-        payload = pay;
-    }
-
     DcSctpMessage(short s, int p, byte[] pay)
     {
         streamID = s;
         ppid = p;
-        payload = ByteBuffer.allocateDirect(pay.length);
-        payload.put(pay);
-        payload.flip();
+        payload = pay;
     }
 
     // The stream identifier to which the message is sent.
@@ -55,7 +44,7 @@ public class DcSctpMessage {
 
     // The payload of the message.
     @CalledByNative
-    public ByteBuffer getPayload() {
+    public byte[] getPayload() {
         return payload;
     }
 
@@ -63,5 +52,5 @@ public class DcSctpMessage {
 
     private final int ppid;
 
-    private final ByteBuffer payload;
+    private final byte[] payload;
 }
