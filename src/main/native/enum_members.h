@@ -1,5 +1,5 @@
-#ifndef ENUM_CLASSES_H
-#define ENUM_CLASSES_H
+#ifndef ENUM_MEMBERS_H
+#define ENUM_MEMBERS_H
 
 #include "type_mapping.h"
 #include <net/dcsctp/public/dcsctp_socket_factory.h>

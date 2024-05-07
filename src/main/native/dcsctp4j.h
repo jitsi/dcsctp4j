@@ -4,7 +4,7 @@
 #include <smjni/smjni.h>
 #include "all_classes.h"
 #include "extra_classes.h"
-#include "enum_classes.h"
+#include "enum_members.h"
 #include <net/dcsctp/public/dcsctp_socket_factory.h>
 #include "wrapped_objects.h"
 
