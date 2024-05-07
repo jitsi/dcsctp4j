@@ -15,19 +15,24 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 // The socket/association state
 @ExposeToNative
 public enum SocketState {
     // The socket is closed.
+    @CalledByNative
     kClosed,
     // The socket has initiated a connection, which is not yet established. Note
     // that for incoming connections and for reconnections when the socket is
     // already connected, the socket will not transition to this state.
+    @CalledByNative
     kConnecting,
     // The socket is connected, and the connection is established.
+    @CalledByNative
     kConnected,
     // The socket is shutting down, and the connection is not yet closed.
+    @CalledByNative
     kShuttingDown,
 }

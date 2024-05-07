@@ -4,14 +4,12 @@
 #include "type_mapping.h"
 #include <net/dcsctp/public/dcsctp_socket_factory.h>
 
-/* jnigen doesn't handle Java enum classes, so do these by hand. */
+/* Wrappers for the actual members defined by enum classes. */
 
-template <typename E> smjni::global_java_ref<E> enum_field(JNIEnv* env, smjni::java_class<E> clazz, const char* name);
-
-class DelayPrecision_class : public smjni::java_runtime::simple_java_class<jDcSctpSocketCallbacks_DelayPrecision>
+class DelayPrecision_members
 {
 public:
-    DelayPrecision_class(JNIEnv * env);
+    DelayPrecision_members(JNIEnv * env);
 
     jDcSctpSocketCallbacks_DelayPrecision kLow() const { return m_kLow.c_ptr(); }
     jDcSctpSocketCallbacks_DelayPrecision kHigh() const { return m_kHigh.c_ptr(); }
@@ -24,10 +22,10 @@ public:
     jDcSctpSocketCallbacks_DelayPrecision map(JNIEnv *, webrtc::TaskQueueBase::DelayPrecision) const;
 };
 
-class ErrorKind_class : public smjni::java_runtime::simple_java_class<jErrorKind>
+class ErrorKind_members
 {
 public:
-    ErrorKind_class(JNIEnv * env);
+    ErrorKind_members(JNIEnv * env);
 
     jErrorKind kNoError() const { return m_kNoError.c_ptr(); }
     jErrorKind kTooManyRetries() const { return m_kTooManyRetries.c_ptr(); }
@@ -54,10 +52,10 @@ public:
     jErrorKind map(JNIEnv *, dcsctp::ErrorKind) const;
 };
 
-class ResetStreamsStatus_class : public smjni::java_runtime::simple_java_class<jResetStreamsStatus>
+class ResetStreamsStatus_members
 {
 public:
-    ResetStreamsStatus_class(JNIEnv * env);
+    ResetStreamsStatus_members(JNIEnv * env);
 
     jResetStreamsStatus kNotConnected() const { return m_kNotConnected.c_ptr(); }
     jResetStreamsStatus kPerformed() const { return m_kPerformed.c_ptr(); }
@@ -72,10 +70,10 @@ public:
     jResetStreamsStatus map(JNIEnv *, dcsctp::ResetStreamsStatus) const;
 };
 
-class SendPacketStatus_class : public smjni::java_runtime::simple_java_class<jSendPacketStatus>
+class SendPacketStatus_members
 {
 public:
-    SendPacketStatus_class(JNIEnv * env);
+    SendPacketStatus_members(JNIEnv * env);
 
     jSendPacketStatus kSuccess() const { return m_kSuccess.c_ptr(); }
     jSendPacketStatus kTemporaryFailure() const { return m_kTemporaryFailure.c_ptr(); };
@@ -92,10 +90,10 @@ public:
 };
 
 
-class SendStatus_class : public smjni::java_runtime::simple_java_class<jSendStatus>
+class SendStatus_members
 {
 public:
-    SendStatus_class(JNIEnv * env);
+    SendStatus_members(JNIEnv * env);
 
     jSendStatus kSuccess() const { return m_kSuccess.c_ptr(); }
     jSendStatus kErrorMessageEmpty() const { return m_kErrorMessageEmpty.c_ptr(); };
@@ -115,10 +113,10 @@ public:
 };
 
 
-class SocketState_class : public smjni::java_runtime::simple_java_class<jSocketState>
+class SocketState_members
 {
 public:
-    SocketState_class(JNIEnv * env);
+    SocketState_members(JNIEnv * env);
 
     jSocketState kClosed() const { return m_kClosed.c_ptr(); }
     jSocketState kConnecting() const { return m_kConnecting.c_ptr(); }
@@ -135,5 +133,35 @@ public:
     jSocketState map(JNIEnv*, dcsctp::SocketState) const;
 };
 
-#define ENUM_CLASSES DelayPrecision_class, ErrorKind_class, ResetStreamsStatus_class, SendPacketStatus_class, SendStatus_class, SocketState_class
+template<typename... Classes> class enum_members_table
+{
+private:
+    struct table : public std::tuple<Classes...>
+    {
+        table(JNIEnv * env) : std::tuple<Classes...>(std::forward<Classes>(env)...)
+        { }
+    };
+
+public:
+    static void init(JNIEnv* env) {
+        instance = new enum_members_table(env);
+    }
+    template<typename T>
+        static const T & get() { return std::get<T>(instance->m_table); }
+private:
+    enum_members_table(JNIEnv* env):
+    m_table(env)
+    { }
+
+    table m_table;
+    static enum_members_table* instance;
+};
+
+#define ENUM_MEMBERS DelayPrecision_members, ErrorKind_members, ResetStreamsStatus_members, SendPacketStatus_members, SendStatus_members, SocketState_members
+
+template<typename... Classes>
+    enum_members_table<Classes...> * enum_members_table<Classes...>::instance = nullptr;
+
+using enum_members = enum_members_table<ENUM_MEMBERS>;
+
 #endif

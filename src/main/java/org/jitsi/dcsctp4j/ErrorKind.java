@@ -15,29 +15,39 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 @ExposeToNative
 public enum ErrorKind {
     // Indicates that no error has occurred. This will never be the case when
     // `OnError` or `OnAborted` is called.
+    @CalledByNative
     kNoError,
     // There have been too many retries or timeouts, and the library has given up.
+    @CalledByNative
     kTooManyRetries,
     // A command was received that is only possible to execute when the socket is
     // connected, which it is not.
+    @CalledByNative
     kNotConnected,
     // Parsing of the command or its parameters failed.
+    @CalledByNative
     kParseFailed,
     // Commands are received in the wrong sequence, which indicates a
     // synchronisation mismatch between the peers.
+    @CalledByNative
     kWrongSequence,
     // The peer has reported an issue using ERROR or ABORT command.
+    @CalledByNative
     kPeerReported,
     // The peer has performed a protocol violation.
+    @CalledByNative
     kProtocolViolation,
     // The receive or send buffers have been exhausted.
+    @CalledByNative
     kResourceExhaustion,
     // The client has performed an invalid operation.
+    @CalledByNative
     kUnsupportedOperation,
 }

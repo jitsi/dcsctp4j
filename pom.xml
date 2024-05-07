@@ -85,12 +85,12 @@
         <dependency>
             <groupId>io.github.gershnik</groupId>
             <artifactId>smjni-jnigen-processor</artifactId>
-            <version>3.8</version>
+            <version>3.9</version>
         </dependency>
         <dependency>
             <groupId>io.github.gershnik</groupId>
             <artifactId>smjni-jnigen-annotations</artifactId>
-            <version>3.8</version>
+            <version>3.9</version>
         </dependency>
       <dependency>
         <groupId>org.junit.jupiter</groupId>

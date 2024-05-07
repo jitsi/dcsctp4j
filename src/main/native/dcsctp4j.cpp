@@ -19,6 +19,7 @@ JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
 
         NATIVE_PROLOG
             java_classes::init(env);
+            enum_members::init(env);
             return JNI_VERSION_1_6;
         NATIVE_EPILOG
     }

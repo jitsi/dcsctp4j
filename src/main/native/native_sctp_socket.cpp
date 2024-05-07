@@ -66,7 +66,7 @@ jSocketState JNICALL DcSctpSocketFactory_NativeSctpSocket_class::state_(JNIEnv* 
 NATIVE_PROLOG
     auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
     auto status = nativeSocket->socket->state();
-    return java_classes::get<SocketState_class>().map(env, status);
+    return enum_members::get<SocketState_members>().map(env, status);
 NATIVE_EPILOG_Z
 }
 
@@ -164,7 +164,7 @@ NATIVE_PROLOG
 
     auto status = nativeSocket->socket->ResetStreams(vstreams);
 
-    return java_classes::get<ResetStreamsStatus_class>().map(env, status);
+    return enum_members::get<ResetStreamsStatus_members>().map(env, status);
 NATIVE_EPILOG_Z
 }
 

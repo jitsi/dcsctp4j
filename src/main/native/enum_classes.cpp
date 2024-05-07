@@ -1,8 +1,7 @@
-#include "enum_classes.h"
+#include "dcsctp4j.h"
 
 using namespace smjni;
 using namespace dcsctp;
-
 
 template <typename E> global_java_ref<E> enum_field(JNIEnv* env, java_class<E> clazz, const char* name)
 {
@@ -10,13 +9,13 @@ template <typename E> global_java_ref<E> enum_field(JNIEnv* env, java_class<E> c
     return field.get(env, clazz);
 }
 
-DelayPrecision_class::DelayPrecision_class(JNIEnv * env) :
-    simple_java_class(env),
-    m_kLow(enum_field<jDcSctpSocketCallbacks_DelayPrecision>(env, *this, "kLow")),
-    m_kHigh(enum_field<jDcSctpSocketCallbacks_DelayPrecision>(env, *this, "kHigh"))
+
+DelayPrecision_members::DelayPrecision_members(JNIEnv * env) :
+    m_kLow(java_classes::get<DcSctpSocketCallbacks_DelayPrecision_class>().get_kLow(env)),
+    m_kHigh(java_classes::get<DcSctpSocketCallbacks_DelayPrecision_class>().get_kHigh(env))
 {}
 
-jDcSctpSocketCallbacks_DelayPrecision DelayPrecision_class::map(JNIEnv * env, webrtc::TaskQueueBase::DelayPrecision delayPrecision) const
+jDcSctpSocketCallbacks_DelayPrecision DelayPrecision_members::map(JNIEnv * env, webrtc::TaskQueueBase::DelayPrecision delayPrecision) const
 {
     switch (delayPrecision) {
     case webrtc::TaskQueueBase::DelayPrecision::kLow:
@@ -30,20 +29,19 @@ jDcSctpSocketCallbacks_DelayPrecision DelayPrecision_class::map(JNIEnv * env, we
 }
 
 
-ErrorKind_class::ErrorKind_class(JNIEnv * env) :
-    simple_java_class(env),
-    m_kNoError(enum_field<jErrorKind>(env, *this, "kNoError")),
-    m_kTooManyRetries(enum_field<jErrorKind>(env, *this, "kTooManyRetries")),
-    m_kNotConnected(enum_field<jErrorKind>(env, *this, "kNotConnected")),
-    m_kParseFailed(enum_field<jErrorKind>(env, *this, "kParseFailed")),
-    m_kWrongSequence(enum_field<jErrorKind>(env, *this, "kWrongSequence")),
-    m_kPeerReported(enum_field<jErrorKind>(env, *this, "kPeerReported")),
-    m_kProtocolViolation(enum_field<jErrorKind>(env, *this, "kProtocolViolation")),
-    m_kResourceExhaustion(enum_field<jErrorKind>(env, *this, "kResourceExhaustion")),
-    m_kUnsupportedOperation(enum_field<jErrorKind>(env, *this, "kUnsupportedOperation"))
+ErrorKind_members::ErrorKind_members(JNIEnv * env) :
+    m_kNoError(java_classes::get<ErrorKind_class>().get_kNoError(env)),
+    m_kTooManyRetries(java_classes::get<ErrorKind_class>().get_kTooManyRetries(env)),
+    m_kNotConnected(java_classes::get<ErrorKind_class>().get_kNotConnected(env)),
+    m_kParseFailed(java_classes::get<ErrorKind_class>().get_kParseFailed(env)),
+    m_kWrongSequence(java_classes::get<ErrorKind_class>().get_kWrongSequence(env)),
+    m_kPeerReported(java_classes::get<ErrorKind_class>().get_kPeerReported(env)),
+    m_kProtocolViolation(java_classes::get<ErrorKind_class>().get_kProtocolViolation(env)),
+    m_kResourceExhaustion(java_classes::get<ErrorKind_class>().get_kResourceExhaustion(env)),
+    m_kUnsupportedOperation(java_classes::get<ErrorKind_class>().get_kUnsupportedOperation(env))
 {}
 
-jErrorKind ErrorKind_class::map(JNIEnv * env, ErrorKind errorKind) const
+jErrorKind ErrorKind_members::map(JNIEnv * env, ErrorKind errorKind) const
 {
     switch (errorKind) {
     case ErrorKind::kNoError:
@@ -71,14 +69,13 @@ jErrorKind ErrorKind_class::map(JNIEnv * env, ErrorKind errorKind) const
 }
 
 
-ResetStreamsStatus_class::ResetStreamsStatus_class(JNIEnv * env) :
-    simple_java_class(env),
-    m_kNotConnected(enum_field<jResetStreamsStatus>(env, *this, "kNotConnected")),
-    m_kPerformed(enum_field<jResetStreamsStatus>(env, *this, "kPerformed")),
-    m_kNotSupported(enum_field<jResetStreamsStatus>(env, *this, "kNotSupported"))
+ResetStreamsStatus_members::ResetStreamsStatus_members(JNIEnv * env) :
+    m_kNotConnected(java_classes::get<ResetStreamsStatus_class>().get_kNotConnected(env)),
+    m_kPerformed(java_classes::get<ResetStreamsStatus_class>().get_kPerformed(env)),
+    m_kNotSupported(java_classes::get<ResetStreamsStatus_class>().get_kNotSupported(env))
 {}
 
-jResetStreamsStatus ResetStreamsStatus_class::map(JNIEnv *env, ResetStreamsStatus resetStreamsStatus) const
+jResetStreamsStatus ResetStreamsStatus_members::map(JNIEnv *env, ResetStreamsStatus resetStreamsStatus) const
 {
     switch (resetStreamsStatus) {
     case ResetStreamsStatus::kNotConnected:
@@ -94,14 +91,13 @@ jResetStreamsStatus ResetStreamsStatus_class::map(JNIEnv *env, ResetStreamsStatu
 }
 
 
-SendPacketStatus_class::SendPacketStatus_class(JNIEnv * env) :
-    simple_java_class(env),
-    m_kSuccess(enum_field<jSendPacketStatus>(env, *this, "kSuccess")),
-    m_kTemporaryFailure(enum_field<jSendPacketStatus>(env, *this, "kTemporaryFailure")),
-    m_kError(enum_field<jSendPacketStatus>(env, *this, "kError"))
+SendPacketStatus_members::SendPacketStatus_members(JNIEnv * env) :
+    m_kSuccess(java_classes::get<SendPacketStatus_class>().get_kSuccess(env)),
+    m_kTemporaryFailure(java_classes::get<SendPacketStatus_class>().get_kTemporaryFailure(env)),
+    m_kError(java_classes::get<SendPacketStatus_class>().get_kError(env))
 {}
 
-jSendPacketStatus SendPacketStatus_class::map(JNIEnv* env, SendPacketStatus sendStatus) const
+jSendPacketStatus SendPacketStatus_members::map(JNIEnv* env, SendPacketStatus sendStatus) const
 {
     switch (sendStatus) {
     case SendPacketStatus::kSuccess:
@@ -116,7 +112,7 @@ jSendPacketStatus SendPacketStatus_class::map(JNIEnv* env, SendPacketStatus send
     }
 }
 
-SendPacketStatus SendPacketStatus_class::map(JNIEnv* env, jSendPacketStatus sendStatus) const
+SendPacketStatus SendPacketStatus_members::map(JNIEnv* env, jSendPacketStatus sendStatus) const
 {
     if (env->IsSameObject(sendStatus, kSuccess())) {
         return SendPacketStatus::kSuccess;
@@ -133,17 +129,16 @@ SendPacketStatus SendPacketStatus_class::map(JNIEnv* env, jSendPacketStatus send
 
 
 
-SendStatus_class::SendStatus_class(JNIEnv * env) :
-    simple_java_class(env),
-    m_kSuccess(enum_field<jSendStatus>(env, *this, "kSuccess")),
-    m_kErrorMessageEmpty(enum_field<jSendStatus>(env, *this, "kErrorMessageEmpty")),
-    m_kErrorMessageTooLarge(enum_field<jSendStatus>(env, *this, "kErrorMessageTooLarge")),
-    m_kErrorResourceExhaustion(enum_field<jSendStatus>(env, *this, "kErrorResourceExhaustion")),
-    m_kErrorShuttingDown(enum_field<jSendStatus>(env, *this, "kErrorShuttingDown"))
+SendStatus_members::SendStatus_members(JNIEnv * env) :
+    m_kSuccess(java_classes::get<SendStatus_class>().get_kSuccess(env)),
+    m_kErrorMessageEmpty(java_classes::get<SendStatus_class>().get_kErrorMessageEmpty(env)),
+    m_kErrorMessageTooLarge(java_classes::get<SendStatus_class>().get_kErrorMessageTooLarge(env)),
+    m_kErrorResourceExhaustion(java_classes::get<SendStatus_class>().get_kErrorResourceExhaustion(env)),
+    m_kErrorShuttingDown(java_classes::get<SendStatus_class>().get_kErrorShuttingDown(env))
 {}
 
 
-jSendStatus SendStatus_class::map(JNIEnv* env, SendStatus sendStatus) const
+jSendStatus SendStatus_members::map(JNIEnv* env, SendStatus sendStatus) const
 {
     switch (sendStatus) {
     case SendStatus::kSuccess:
@@ -163,15 +158,14 @@ jSendStatus SendStatus_class::map(JNIEnv* env, SendStatus sendStatus) const
 }
 
 
-SocketState_class::SocketState_class(JNIEnv * env) :
-    simple_java_class(env),
-    m_kClosed(enum_field<jSocketState>(env, *this, "kClosed")),
-    m_kConnecting(enum_field<jSocketState>(env, *this, "kConnecting")),
-    m_kConnected(enum_field<jSocketState>(env, *this, "kConnected")),
-    m_kShuttingDown(enum_field<jSocketState>(env, *this, "kShuttingDown"))
+SocketState_members::SocketState_members(JNIEnv * env) :
+    m_kClosed(java_classes::get<SocketState_class>().get_kClosed(env)),
+    m_kConnecting(java_classes::get<SocketState_class>().get_kConnecting(env)),
+    m_kConnected(java_classes::get<SocketState_class>().get_kConnected(env)),
+    m_kShuttingDown(java_classes::get<SocketState_class>().get_kShuttingDown(env))
 {}
 
-jSocketState SocketState_class::map(JNIEnv *env, SocketState socketState) const
+jSocketState SocketState_members::map(JNIEnv *env, SocketState socketState) const
 {
     switch (socketState) {
     case SocketState::kClosed:

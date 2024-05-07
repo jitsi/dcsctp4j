@@ -9,7 +9,7 @@
 #include "wrapped_objects.h"
 
 
-using java_classes = smjni::java_class_table<JNIGEN_ALL_GENERATED_CLASSES, EXTRA_CLASSES, ENUM_CLASSES>;
+using java_classes = smjni::java_class_table<JNIGEN_ALL_GENERATED_CLASSES, EXTRA_CLASSES>;
 
 #define NATIVE_PROLOG  try {
 #define NATIVE_EPILOG  } \

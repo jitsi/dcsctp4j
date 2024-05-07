@@ -15,15 +15,19 @@
  */
 package org.jitsi.dcsctp4j;
 
+import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 // Return value of ResetStreams.
 @ExposeToNative
 public enum ResetStreamsStatus {
     // If the connection is not yet established, this will be returned.
+    @CalledByNative
     kNotConnected,
     // Indicates that ResetStreams operation has been successfully initiated.
+    @CalledByNative
     kPerformed,
     // Indicates that ResetStreams has failed as it's not supported by the peer.
+    @CalledByNative
     kNotSupported,
 }

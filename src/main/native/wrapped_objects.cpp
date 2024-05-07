@@ -92,7 +92,7 @@ std::unique_ptr<Timeout> WrappedSocketCallbacks::CreateTimeout(
     JNIEnv* env = jni_provider::get_jni();
 
     auto timeout = socketCallbacksClass.createTimeout(env, socketCallbacks,
-                                                      java_classes::get<DelayPrecision_class>().map(env, precision));
+                                                      enum_members::get<DelayPrecision_members>().map(env, precision));
 
     return make_unique<WrappedTimeout>(timeout.c_ptr());
 }
@@ -135,7 +135,7 @@ void WrappedSocketCallbacks::OnError(ErrorKind error, absl::string_view message)
 
     auto jmessage = java_string_create(env, message.data(), message.size());
 
-    socketCallbacksClass.OnError(env, socketCallbacks, java_classes::get<ErrorKind_class>().map(env, error), jmessage);
+    socketCallbacksClass.OnError(env, socketCallbacks, enum_members::get<ErrorKind_members>().map(env, error), jmessage);
 }
 
 void WrappedSocketCallbacks::OnAborted(ErrorKind error, absl::string_view message)
@@ -144,7 +144,7 @@ void WrappedSocketCallbacks::OnAborted(ErrorKind error, absl::string_view messag
 
     auto jmessage = java_string_create(env, message.data(), message.size());
 
-    socketCallbacksClass.OnAborted(env, socketCallbacks, java_classes::get<ErrorKind_class>().map(env, error), jmessage);
+    socketCallbacksClass.OnAborted(env, socketCallbacks, enum_members::get<ErrorKind_members>().map(env, error), jmessage);
 }
 
 void WrappedSocketCallbacks::OnConnected()

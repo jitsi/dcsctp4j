@@ -216,10 +216,12 @@ public interface DcSctpSocketCallbacks {
     enum DelayPrecision {
         // This may include up to a 17 ms leeway in addition to OS timer precision.
         // See PostDelayedTask() for more information.
+        @CalledByNative
         kLow,
         // This does not have the additional delay that kLow has, but it is still
         // limited by OS timer precision. See PostDelayedHighPrecisionTask() for
         // more information.
+        @CalledByNative
         kHigh,
     }
 }
