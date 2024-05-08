@@ -6,6 +6,8 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi;
 
+set -e
+
 JAVA_HOME=$1
 ARCH=$2
 
@@ -30,5 +32,6 @@ cmake -B cmake-build-"$OSX_ARCH" \
     -DCMAKE_INSTALL_PREFIX="src/main/resources/darwin-$INSTALL_PREFIX_ARCH" \
     -DCMAKE_OSX_ARCHITECTURES="$OSX_ARCH" \
     -DWEBRTC_HOME="$WEBRTC_HOME" \
-    -DWEBRTC_OBJ="$WEBRTC_OBJ"
-cmake --build cmake-build-"$OSX_ARCH" --config Release --target install
+    -DWEBRTC_OBJ="$WEBRTC_OBJ" \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build cmake-build-"$OSX_ARCH" --target install

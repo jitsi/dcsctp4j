@@ -68,6 +68,50 @@ jErrorKind ErrorKind_members::map(JNIEnv * env, ErrorKind errorKind) const
     }
 }
 
+LoggingSeverity_members::LoggingSeverity_members(JNIEnv * env) :
+    m_LS_VERBOSE(java_classes::get<LogProxy_LoggingSeverity_class>().get_LS_VERBOSE(env)),
+    m_LS_INFO(java_classes::get<LogProxy_LoggingSeverity_class>().get_LS_INFO(env)),
+    m_LS_WARNING(java_classes::get<LogProxy_LoggingSeverity_class>().get_LS_WARNING(env)),
+    m_LS_ERROR(java_classes::get<LogProxy_LoggingSeverity_class>().get_LS_ERROR(env)),
+    m_LS_NONE(java_classes::get<LogProxy_LoggingSeverity_class>().get_LS_NONE(env))
+{}
+
+jLogProxy_LoggingSeverity LoggingSeverity_members::map(JNIEnv *env, rtc::LoggingSeverity loggingSeverity) const
+{
+    switch (loggingSeverity) {
+    case rtc::LoggingSeverity::LS_VERBOSE:
+        return LS_VERBOSE();
+    case rtc::LoggingSeverity::LS_INFO:
+        return LS_INFO();
+    case rtc::LoggingSeverity::LS_WARNING:
+        return LS_WARNING();
+    case rtc::LoggingSeverity::LS_ERROR:
+        return LS_ERROR();
+    case rtc::LoggingSeverity::LS_NONE:
+        return LS_NONE();
+    default:
+        auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Invalid value for LoggingSeverity"));
+        throw java_exception(ex);
+    }
+}
+
+rtc::LoggingSeverity LoggingSeverity_members::map(JNIEnv * env, jLogProxy_LoggingSeverity loggingSeverity) const
+{
+    if (env->IsSameObject(loggingSeverity, LS_VERBOSE())) {
+        return rtc::LoggingSeverity::LS_VERBOSE;
+    } else if (env->IsSameObject(loggingSeverity, LS_INFO())) {
+        return rtc::LoggingSeverity::LS_INFO;
+    } else if (env->IsSameObject(loggingSeverity, LS_WARNING())) {
+        return rtc::LoggingSeverity::LS_WARNING;
+    } else if (env->IsSameObject(loggingSeverity, LS_ERROR())) {
+        return rtc::LoggingSeverity::LS_ERROR;
+    } else if (env->IsSameObject(loggingSeverity, LS_NONE())) {
+        return rtc::LoggingSeverity::LS_NONE;
+    } else {
+        auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Invalid value for LoggingSeverity"));
+        throw java_exception(ex);
+    }
+}
 
 ResetStreamsStatus_members::ResetStreamsStatus_members(JNIEnv * env) :
     m_kNotConnected(java_classes::get<ResetStreamsStatus_class>().get_kNotConnected(env)),

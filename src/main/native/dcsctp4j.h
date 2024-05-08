@@ -8,12 +8,11 @@
 #include <net/dcsctp/public/dcsctp_socket_factory.h>
 #include "wrapped_objects.h"
 
-
 using java_classes = smjni::java_class_table<JNIGEN_ALL_GENERATED_CLASSES, EXTRA_CLASSES>;
 
 #define NATIVE_PROLOG  try {
 #define NATIVE_EPILOG  } \
-                       catch(java_exception & ex) \
+                       catch(smjni::java_exception & ex) \
                        { \
                            ex.raise(env);\
                        }\

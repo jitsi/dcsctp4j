@@ -93,6 +93,16 @@ public class DcSctp4jTest {
         } catch (InterruptedException ignored) {
         }
     }
+
+    public static void main(String[] args) {
+        DcSctp4jTest test = new DcSctp4jTest();
+        System.out.println("Running testLoad");
+        test.testLoad();
+        System.out.println("Running testSocketCreate");
+        test.testSocketCreate();
+        System.out.println("Running testSimpleConnection");
+        test.testSimpleConnection();
+    }
 }
 
 

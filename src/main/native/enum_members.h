@@ -3,6 +3,7 @@
 
 #include "type_mapping.h"
 #include <net/dcsctp/public/dcsctp_socket_factory.h>
+#include <rtc_base/logging.h>
 
 /* Wrappers for the actual members defined by enum classes. */
 
@@ -50,6 +51,29 @@ private:
 
 public:
     jErrorKind map(JNIEnv *, dcsctp::ErrorKind) const;
+};
+
+class LoggingSeverity_members
+{
+public:
+    LoggingSeverity_members(JNIEnv * env);
+
+    jLogProxy_LoggingSeverity LS_VERBOSE() const { return m_LS_VERBOSE.c_ptr(); }
+    jLogProxy_LoggingSeverity LS_INFO() const { return m_LS_INFO.c_ptr(); }
+    jLogProxy_LoggingSeverity LS_WARNING() const { return m_LS_WARNING.c_ptr(); }
+    jLogProxy_LoggingSeverity LS_ERROR() const { return m_LS_ERROR.c_ptr(); }
+    jLogProxy_LoggingSeverity LS_NONE() const { return m_LS_NONE.c_ptr(); }
+
+private:
+    smjni::global_java_ref<jLogProxy_LoggingSeverity> m_LS_VERBOSE;
+    smjni::global_java_ref<jLogProxy_LoggingSeverity> m_LS_INFO;
+    smjni::global_java_ref<jLogProxy_LoggingSeverity> m_LS_WARNING;
+    smjni::global_java_ref<jLogProxy_LoggingSeverity> m_LS_ERROR;
+    smjni::global_java_ref<jLogProxy_LoggingSeverity> m_LS_NONE;
+
+public:
+    jLogProxy_LoggingSeverity map(JNIEnv *, rtc::LoggingSeverity) const;
+    rtc::LoggingSeverity map(JNIEnv *, jLogProxy_LoggingSeverity) const;
 };
 
 class ResetStreamsStatus_members
@@ -157,7 +181,8 @@ private:
     static enum_members_table* instance;
 };
 
-#define ENUM_MEMBERS DelayPrecision_members, ErrorKind_members, ResetStreamsStatus_members, SendPacketStatus_members, SendStatus_members, SocketState_members
+#define ENUM_MEMBERS DelayPrecision_members, ErrorKind_members, LoggingSeverity_members, \
+        ResetStreamsStatus_members, SendPacketStatus_members, SendStatus_members, SocketState_members
 
 template<typename... Classes>
     enum_members_table<Classes...> * enum_members_table<Classes...>::instance = nullptr;

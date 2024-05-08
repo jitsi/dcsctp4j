@@ -35,12 +35,25 @@ add_library(${PROJECT_NAME} SHARED
             src/main/native/mapped_objects.cpp
             src/main/native/native_sctp_socket.cpp
             src/main/native/enum_members.cpp
+            src/main/native/log_proxy.cpp
             )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
                       smjni::smjni
                       dcsctp
                       )
+
+# Need to set this to be able to safely include rtc_base/logging.h.
+# TODO: adjust if you port to Windows.
+target_compile_definitions(${PROJECT_NAME} PUBLIC
+                           WEBRTC_POSIX=1
+                           )
+
+# WebRTC is compiled without RTTI, so turn it off here as well
+# TODO: adjust this if compiling with a non GNU/Clang compiler (e.g. Visual Studio).
+target_compile_options(${PROJECT_NAME} PRIVATE
+                       -fno-rtti
+                       )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
                            ${JNI_INCLUDE_DIRS}

@@ -32,6 +32,7 @@ public class DcSctp4j {
         // Load the native library
         try {
             JNIUtils.loadLibrary("dcsctp4j", DcSctp4j.class.getClassLoader());
+            LogProxy.register();
             logger.info("DcSctp4j lib loaded");
         } catch (Exception e) {
             logger.error("Error loading native library: ", e);
