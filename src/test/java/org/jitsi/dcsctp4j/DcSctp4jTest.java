@@ -27,7 +27,7 @@ import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class DcSctp4jTest {
     public static ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -49,6 +49,27 @@ public class DcSctp4jTest {
 
         wrapper.socket = factory.create("testSocketCreate", callbacks, null, options);
         assertNotNull(wrapper.socket);
+    }
+
+    @Test
+    public void testExceptionThroughJNI() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        Logger logger = new LoggerImpl("testException");
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null) {
+            @Override
+            public Timeout createTimeout(DelayPrecision precision) {
+                throw new IllegalStateException("I'm not happy!");
+            }
+        };
+        DcSctpOptions options = new DcSctpOptions();
+
+        IllegalStateException e = assertThrows(IllegalStateException.class,
+                () -> wrapper.socket = factory.create("textException", callbacks, null, options),
+                "Expected exception to be successfully thrown through JNI"
+                );
+        assertEquals("I'm not happy!", e.getMessage());
+
     }
 
     @Test
