@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.18)
+cmake_minimum_required(VERSION 3.16)
 project(dcsctp4j LANGUAGES CXX)
 
 if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
