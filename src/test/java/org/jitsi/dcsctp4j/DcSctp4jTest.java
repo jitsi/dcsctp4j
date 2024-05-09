@@ -102,6 +102,7 @@ public class DcSctp4jTest {
         test.testSocketCreate();
         System.out.println("Running testSimpleConnection");
         test.testSimpleConnection();
+        DcSctp4jTest.executor.shutdown();
     }
 }
 
