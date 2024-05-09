@@ -30,7 +30,7 @@ public class LogProxy {
 
     LogProxy()
     {
-        nativePtr = registerNative(LoggingSeverity.fromLevel(getEffectiveLevel(loggerDelegate)));
+        nativePtr = registerNative(getEffectiveLoggingSeverity(loggerDelegate));
         long ptrCopy = nativePtr;
         DcSctp4j.CLEANER.register(this, () -> destruct(ptrCopy));
     }
@@ -92,37 +92,20 @@ public class LogProxy {
         }
     }
 
-    private Level getEffectiveLevel(java.util.logging.Logger logger)
+    /** Unfortunately there's no API to get a logger's effective log level directly, so
+     *  experimentally find the broadest LoggingSeverity whose level is logged by the logger.
+     */
+    private static LoggingSeverity getEffectiveLoggingSeverity(java.util.logging.Logger logger)
     {
-        /* Unfortunately there's no public API to get a logger's effective log level directly.
-           So, we binary search for it.
-        *  */
-        Level low = Level.ALL;
-        Level hi = Level.OFF;
-        if (!logger.isLoggable(hi))
-        {
-            return hi;
-        }
-        if (logger.isLoggable(low))
-        {
-            return low;
-        }
-        while (low.intValue() + 1 < hi.intValue())
-        {
-            int midValue = (low.intValue() + hi.intValue()) >>> 1;
-            Level mid = Level.parse(Integer.toString(midValue));
-            if (!logger.isLoggable(mid))
-            {
-                low = mid;
-            }
-            else
-            {
-                hi = mid;
+        LoggingSeverity ret = LoggingSeverity.LS_NONE;
+        for (LoggingSeverity l : LoggingSeverity.values()) {
+            if (logger.isLoggable(l.level) &&
+                    l.level.intValue() < ret.level.intValue()) {
+                ret = l;
             }
         }
-        return low;
+        return ret;
     }
-
 
     @ExposeToNative
     public enum LoggingSeverity {
