@@ -28,25 +28,13 @@ import smjni.jnigen.*;
 // calling a public method in `DcSctpSocketInterface`.
 @ExposeToNative
 public interface DcSctpSocketCallbacks {
-    // Called when the library wants the packet serialized as `data` to be sent.
-    //
-    // TODO(bugs.webrtc.org/12943): This method is deprecated, see
-    // `SendPacketWithStatus`.
-    //
-    // Note that it's NOT ALLOWED to call into this library from within this
-    // callback.
-    @CalledByNative
-    default void sendPacket(byte[] data) {}
 
     // Called when the library wants the packet serialized as `data` to be sent.
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
-    default SendPacketStatus sendPacketWithStatus(
-            byte[] data) {
-        sendPacket(data);
-        return SendPacketStatus.kSuccess;
-    }
+    SendPacketStatus sendPacketWithStatus(
+            byte[] data);
 
     // Version of sendPacketWithStatus optimizing JNI
     @CalledByNative
@@ -67,25 +55,7 @@ public interface DcSctpSocketCallbacks {
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
     @CalledByNative
-    default Timeout createTimeout(DelayPrecision precision) {
-        // TODO(hbos): When dependencies have migrated to this new signature, make
-        // this pure virtual and delete the other version.
-        return createTimeout();
-    }
-    // TODO(hbos): When dependencies have migrated to the other signature, delete
-    // this version.
-    default Timeout createTimeout() {
-        return createTimeout(DelayPrecision.kLow);
-    }
-
-    // Returns the current time in milliseconds (from any epoch).
-    //
-    // TODO(bugs.webrtc.org/15593): This method is deprecated, see `Now`.
-    //
-    // Note that it's NOT ALLOWED to call into this library from within this
-    // callback.
-    @CalledByNative
-    default long timeMillis() { return 0; }
+    Timeout createTimeout(DelayPrecision precision);
 
     // Returns the current time (from any epoch).
     //
@@ -94,9 +64,7 @@ public interface DcSctpSocketCallbacks {
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
     @CalledByNative
-    default Instant Now() {
-        return Instant.ofEpochMilli(timeMillis());
-    }
+    Instant Now();
 
     // Called when the library needs a random number uniformly distributed between
     // `low` (inclusive) and `high` (exclusive). The random numbers used by the

@@ -76,14 +76,7 @@ WrappedSocketCallbacks::WrappedSocketCallbacks(jDcSctpSocketCallbacks callbacks)
 
 void WrappedSocketCallbacks::SendPacket(rtc::ArrayView<const uint8_t> data)
 {
-    JNIEnv* env = jni_provider::get_jni();
-
-    auto jData = java_array_create<jbyte>(env, data.size());
-    auto aData = java_array_access(env, jData);
-    copy(data.cbegin(), data.cend(), aData.begin());
-    aData.commit();
-
-    socketCallbacksClass.sendPacket(env, socketCallbacks, jData.c_ptr());
+    SendPacketWithStatus(data);
 }
 
 SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
@@ -114,9 +107,7 @@ std::unique_ptr<Timeout> WrappedSocketCallbacks::CreateTimeout(
 
 TimeMs WrappedSocketCallbacks::TimeMillis()
 {
-    JNIEnv* env = jni_provider::get_jni();
-
-    return TimeMs(socketCallbacksClass.timeMillis(env, socketCallbacks));
+    return TimeMs(Now().ms());
 }
 
 webrtc::Timestamp WrappedSocketCallbacks::Now()
