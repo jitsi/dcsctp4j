@@ -51,7 +51,7 @@ public class DcSctp4jTest {
         assertNotNull(wrapper.socket);
     }
 
-    @Test
+    @Test @Disabled /* dcsctp is compiled with -fno-exceptions, so we can't throw through it. */
     public void testExceptionThroughJNI() {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
@@ -123,6 +123,8 @@ public class DcSctp4jTest {
         test.testSocketCreate();
         System.out.println("Running testSimpleConnection");
         test.testSimpleConnection();
+        /* System.out.println("Testing testExceptionThroughJNI");
+        test.testExceptionThroughJNI(); */
         DcSctp4jTest.executor.shutdown();
     }
 }
