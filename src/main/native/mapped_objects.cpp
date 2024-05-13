@@ -260,6 +260,159 @@ NATIVE_PROLOG
 NATIVE_EPILOG
 }
 
+jlong JNICALL DcSctpOptions_class::getRtoInitial(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return *options->rto_initial;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setRtoInitial(JNIEnv* env, jDcSctpOptions jOptions, jlong rtoInitial)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->rto_initial = DurationMs(rtoInitial);
+NATIVE_EPILOG
+}
+
+jlong JNICALL DcSctpOptions_class::getRtoMax(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return *options->rto_max;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setRtoMax(JNIEnv* env, jDcSctpOptions jOptions, jlong rtoMax)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->rto_max = DurationMs(rtoMax);
+NATIVE_EPILOG
+}
+
+jlong JNICALL DcSctpOptions_class::getRtoMin(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return *options->rto_min;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setRtoMin(JNIEnv* env, jDcSctpOptions jOptions, jlong rtoMin)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->rto_min = DurationMs(rtoMin);
+NATIVE_EPILOG
+}
+
+jlong JNICALL DcSctpOptions_class::getT1InitTimeout(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return *options->t1_init_timeout;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setT1InitTimeout(JNIEnv* env, jDcSctpOptions jOptions, jlong t1InitTimeout)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->t1_init_timeout = DurationMs(t1InitTimeout);
+NATIVE_EPILOG
+}
+
+jlong JNICALL DcSctpOptions_class::getT1CookieTimeout(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return *options->t1_cookie_timeout;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setT1CookieTimeout(JNIEnv* env, jDcSctpOptions jOptions, jlong t1CookieTimeout)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->t1_cookie_timeout = DurationMs(t1CookieTimeout);
+NATIVE_EPILOG
+}
+
+jlong JNICALL DcSctpOptions_class::getT2ShutdownTimeout(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return *options->t2_shutdown_timeout;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setT2ShutdownTimeout(JNIEnv* env, jDcSctpOptions jOptions, jlong t2ShutdownTimeout)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->t2_shutdown_timeout = DurationMs(t2ShutdownTimeout);
+NATIVE_EPILOG
+}
+
+jLong JNICALL DcSctpOptions_class::getMaxTimerBackoffDuration(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    if (!options->max_timer_backoff_duration) {
+        return nullptr;
+    }
+    return java_classes::get<Long_class>().ctor(env, **options->max_timer_backoff_duration).release();
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setMaxTimerBackoffDuration(JNIEnv* env, jDcSctpOptions jOptions, jLong maxTimerBackoffDuration)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    if (maxTimerBackoffDuration != nullptr) {
+        options->max_timer_backoff_duration =
+            std::optional(DurationMs(java_classes::get<Long_class>().longValue(env, maxTimerBackoffDuration)));
+    }
+    else {
+        options->max_timer_backoff_duration = std::optional<DurationMs>();
+    }
+NATIVE_EPILOG
+}
+
+jlong JNICALL DcSctpOptions_class::getHeartbeatInterval(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return *options->heartbeat_interval;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setHeartbeatInterval(JNIEnv* env, jDcSctpOptions jOptions, jlong heartbeatInterval)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->heartbeat_interval = DurationMs(heartbeatInterval);
+NATIVE_EPILOG
+}
+
 
 jlong JNICALL DcSctpOptions_class::getDelayedAckMaxTimeout(JNIEnv* env, jDcSctpOptions jOptions)
 {

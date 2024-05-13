@@ -152,6 +152,51 @@ public class DcSctpOptions {
 
     public native void setRttMax(long rttMax);
 
+    // Initial RTO value.
+    public native long getRtoInitial();
+
+    public native void setRtoInitial(long rtoInitial);
+
+    public native long getRtoMax();
+
+    public native void setRtoMax(long rtoMax);
+
+    // Minimum RTO value. This must be larger than an expected peer delayed ack
+    // timeout.
+    public native long getRtoMin();
+
+    public native void setRtoMin(long rtoMin);
+
+    // T1-init timeout.
+    public native long getT1InitTimeout();
+
+    public native void setT1InitTimeout(long t1InitTimeout);
+
+    // T1-cookie timeout.
+    public native long getT1CookieTimeout();
+
+    public native void setT1CookieTimeout(long t1CookieTimeout);
+
+    // T2-shutdown timeout.
+    public native long getT2ShutdownTimeout();
+
+    public native void setT2ShutdownTimeout(long t2ShutdownTimeout);
+
+    // For t1-init, t1-cookie, t2-shutdown, t3-rtx, this value - if set - will be
+    // the upper bound on how large the exponentially backed off timeout can
+    // become. The lower the duration, the faster the connection can recover on
+    // transient network issues. Setting this value may require changing
+    // `max_retransmissions` and `max_init_retransmits` to ensure that the
+    // connection is not closed too quickly.
+    public native Long getMaxTimerBackoffDuration();
+
+    public native void setMaxTimerBackoffDuration(Long maxTimerBackoffDuration);
+
+    // Hearbeat interval (on idle connections only). Set to zero to disable.
+    public native long getHeartbeatInterval();
+
+    public native void setHeartbeatInterval(long heartbeatInterval);
+
     // The maximum time when a SACK will be sent from the arrival of an
     // unacknowledged packet. Whatever is smallest of RTO/2 and this will be used.
     public native long getDelayedAckMaxTimeout();
@@ -266,10 +311,9 @@ public class DcSctpOptions {
     //  -13 DTLS record header
     //   -4 TURN ChannelData
     // = 1191 bytes.
-    static final long kMaxSafeMTUSize = 1191;
+    public static final long kMaxSafeMTUSize = 1191;
 
-    static final int ZeroChecksumAlternateErrorDetectionMethod_None = 0;
+    public static final int ZeroChecksumAlternateErrorDetectionMethod_None = 0;
 
-    static final int ZeroChecksumAlternateErrorDetectionMethod_LowerLayerDtls = 1;
-
+    public static final int ZeroChecksumAlternateErrorDetectionMethod_LowerLayerDtls = 1;
 }
