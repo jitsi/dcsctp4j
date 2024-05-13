@@ -14,14 +14,19 @@ NativeSctpSocket::NativeSctpSocket(jDcSctpSocketCallbacks jCallbacks) :
 }
 
 
-void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::receivePacket_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray data)
+void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::receivePacket_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray data, jint offset, jint length)
 {
 NATIVE_PROLOG
     auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
     java_array_access aData(env, data);
-    auto vData = vector<uint8_t>(aData.cbegin(), aData.cend());
-    auto dataView = rtc::ArrayView<const uint8_t>(vData.data(), vData.size());
-    nativeSocket->socket->ReceivePacket(vData);
+    if (offset + length > aData.size()) {
+        auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Invalid values for array length"));
+        throw java_exception(ex);
+    }
+    /* It's safe to expose the java array data directly for the duration of this call,
+       because dcsctp will make a copy of anything it needs. */
+    auto dataView = rtc::ArrayView<const uint8_t>(reinterpret_cast<const uint8_t*>(aData.data()) + offset, length);
+    nativeSocket->socket->ReceivePacket(dataView);
 NATIVE_EPILOG
 }
 

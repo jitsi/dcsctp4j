@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class DcSctpSocketFactory {
     private final long ptr;
 
-    DcSctpSocketFactory() {
+    public DcSctpSocketFactory() {
         // Force load of DcSctp4j
         if (DcSctp4j.CLEANER == null) {
             throw new IllegalStateException();
@@ -66,12 +66,16 @@ public class DcSctpSocketFactory {
         }
 
         @Override
-        public void receivePacket(byte[] data)
+        public void receivePacket(byte[] data, int offset, int length)
         {
-            receivePacket_(ptr, data);
+            if (offset + length > data.length) {
+                throw new IllegalArgumentException("Array length " + data.length +
+                        " too short for offset " + offset + " length " + length);
+            }
+            receivePacket_(ptr, data, offset, length);
         }
 
-        private native void receivePacket_(long ptr, byte[] data);
+        private native void receivePacket_(long ptr, byte[] data, int offset, int length);
 
         @Override
         public void handleTimeout(long timeoutId)

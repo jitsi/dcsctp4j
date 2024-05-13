@@ -101,18 +101,29 @@ public class DcSctp4jTest {
             Thread.sleep(100);
         } catch (InterruptedException ignored) {
         }
+
+        assertEquals(client.socket.state(), SocketState.kConnected);
+        assertEquals(server.socket.state(), SocketState.kConnected);
+
         DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         SendOptions sendOptions = new SendOptions();
         client.socket.send(message, sendOptions);
         try {
-            Thread.sleep(1000);
+            Thread.sleep(100);
         } catch (InterruptedException ignored) {
         }
+
+        assertEquals(client.socket.state(), SocketState.kConnected);
+        assertEquals(server.socket.state(), SocketState.kConnected);
+
         client.socket.shutdown();
         try {
             Thread.sleep(100);
         } catch (InterruptedException ignored) {
         }
+
+        assertEquals(client.socket.state(), SocketState.kClosed);
+        assertEquals(server.socket.state(), SocketState.kClosed);
     }
 
     public static void main(String[] args) {
@@ -199,7 +210,14 @@ class TestCallbacks implements DcSctpSocketCallbacks {
             return SendPacketStatus.kTemporaryFailure;
         }
         try {
-            DcSctp4jTest.executor.submit(() -> dest.socket.receivePacket(data));
+            DcSctp4jTest.executor.submit(() ->
+            {
+                try {
+                    dest.socket.receivePacket(data, 0, data.length);
+                } catch (Exception e) {
+                    logger.error("Error processing received packet", e);
+                }
+            });
         }
         catch (Exception e) {
             logger.error("Error submitting packet", e);
