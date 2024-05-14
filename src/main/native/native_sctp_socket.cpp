@@ -214,8 +214,8 @@ NATIVE_PROLOG
     if (!metrics) {
         return nullptr;
     }
-    Metrics* metricsP = new Metrics(*metrics);
-    return java_classes::get<Metrics_class>().ctor(env, (jlong)(intptr_t)metricsP).release();
+    auto metricsP = make_unique<Metrics>(*metrics);
+    return java_classes::get<Metrics_class>().ctor(env, (jlong)(intptr_t)metricsP.release()).release();
 NATIVE_EPILOG_Z
 }
 
