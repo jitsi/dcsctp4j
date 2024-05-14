@@ -17,6 +17,7 @@ package org.jitsi.dcsctp4j;
 
 import java.time.Instant;
 
+import org.jetbrains.annotations.NotNull;
 import smjni.jnigen.*;
 
 // Callbacks that the DcSctpSocket will call synchronously to the owning
@@ -34,11 +35,11 @@ public interface DcSctpSocketCallbacks {
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
     SendPacketStatus sendPacketWithStatus(
-            byte[] data);
+            @NotNull byte[] data);
 
     // Version of sendPacketWithStatus optimizing JNI
     @CalledByNative
-    default int sendPacketWithStatus_(byte[] data) {
+    default int sendPacketWithStatus_(@NotNull byte[] data) {
         return sendPacketWithStatus(data).nativeStatus;
     }
 
@@ -55,7 +56,7 @@ public interface DcSctpSocketCallbacks {
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
     @CalledByNative
-    Timeout createTimeout(DelayPrecision precision);
+    Timeout createTimeout(@NotNull DelayPrecision precision);
 
     // Returns the current time (from any epoch).
     //
@@ -63,7 +64,7 @@ public interface DcSctpSocketCallbacks {
     //
     // Note that it's NOT ALLOWED to call into this library from within this
     // callback.
-    @CalledByNative
+    @CalledByNative @NotNull
     Instant Now();
 
     // Called when the library needs a random number uniformly distributed between
@@ -90,11 +91,11 @@ public interface DcSctpSocketCallbacks {
     //
     // It is allowed to call into this library from within this callback.
     @CalledByNative
-    void OnMessageReceived(DcSctpMessage message);
+    void OnMessageReceived(@NotNull DcSctpMessage message);
 
     // Version of OnMessageReceived optimizing JNI
     @CalledByNative
-    default void OnMessageReceived_(byte[] payload, int ppid, short streamID)
+    default void OnMessageReceived_(@NotNull byte[] payload, int ppid, short streamID)
     {
         DcSctpMessage message = new DcSctpMessage(streamID, ppid, payload);
         OnMessageReceived(message);
@@ -107,7 +108,7 @@ public interface DcSctpSocketCallbacks {
     //
     // It is allowed to call into this library from within this callback.
     @CalledByNative
-    void OnError(ErrorKind error, String message);
+    void OnError(@NotNull ErrorKind error, @NotNull String message);
 
     // Triggered when the socket has aborted - either as decided by this socket
     // due to e.g. too many retransmission attempts, or by the peer when
@@ -116,7 +117,7 @@ public interface DcSctpSocketCallbacks {
     //
     // It is allowed to call into this library from within this callback.
     @CalledByNative
-    void OnAborted(ErrorKind error, String message);
+    void OnAborted(@NotNull ErrorKind error, @NotNull String message);
 
     // Called when calling `Connect` succeeds, but also for incoming successful
     // connection attempts.
@@ -145,15 +146,15 @@ public interface DcSctpSocketCallbacks {
     // It is allowed to call into this library from within this callback.
     @CalledByNative
     void OnStreamsResetFailed(
-            short[] outgoing_streams,
-            String reason);
+            @NotNull short[] outgoing_streams,
+            @NotNull String reason);
 
     // Indicates that a stream reset request has been performed.
     //
     // It is allowed to call into this library from within this callback.
     @CalledByNative
     void OnStreamsResetPerformed(
-            short[] outgoing_streams);
+            @NotNull short[] outgoing_streams);
 
     // When a peer has reset some of its outgoing streams, this will be called. An
     // empty list indicates that all streams have been reset.
@@ -161,7 +162,7 @@ public interface DcSctpSocketCallbacks {
     // It is allowed to call into this library from within this callback.
     @CalledByNative
     void OnIncomingStreamsReset(
-            short[] incoming_streams);
+            @NotNull short[] incoming_streams);
 
     // Will be called when the amount of data buffered to be sent falls to or
     // below the threshold set when calling `SetBufferedAmountLowThreshold`.

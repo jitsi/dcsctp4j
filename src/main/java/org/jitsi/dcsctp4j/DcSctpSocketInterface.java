@@ -15,11 +15,13 @@
  */
 package org.jitsi.dcsctp4j;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.List;
 
 public interface DcSctpSocketInterface {
     /** To be called when an incoming SCTP packet is to be processed. */
-    void receivePacket(byte[] data, int offset, int length);
+    void receivePacket(@NotNull byte[] data, int offset, int length);
 
     /** To be called when a timeout has expired. The [timeout_id] is provided
      when the timeout was initiated. */
@@ -48,10 +50,10 @@ public interface DcSctpSocketInterface {
     void close();
 
     // The socket state.
-    SocketState state();
+    @NotNull SocketState state();
 
     // The options it was created with.
-    DcSctpOptions options();
+    @NotNull DcSctpOptions options();
 
     // Sets the priority of an outgoing stream. The initial value, when not set,
     // is `DcSctpOptions::default_stream_priority`.
@@ -68,7 +70,7 @@ public interface DcSctpSocketInterface {
     // The association does not have to be established before calling this method.
     // If it's called before there is an established association, the message will
     // be queued.
-    SendStatus send(DcSctpMessage message, SendOptions options);
+    @NotNull SendStatus send(@NotNull DcSctpMessage message, @NotNull SendOptions options);
 
     // Sends the messages `messages` using the provided send options.
     // Sending a message is an asynchronous operation, and the `OnError` callback
@@ -76,7 +78,7 @@ public interface DcSctpSocketInterface {
     //
     // This has identical semantics to Send, except that it may coalesce many
     // messages into a single SCTP packet if they would fit.
-    List<SendStatus> sendMany(List<DcSctpMessage> messages, SendOptions options);
+    @NotNull List<SendStatus> sendMany(@NotNull List<DcSctpMessage> messages, @NotNull SendOptions options);
 
     // Resetting streams is an asynchronous operation and the results will
     // be notified using `DcSctpSocketCallbacks::OnStreamsResetDone()` on success
@@ -93,7 +95,7 @@ public interface DcSctpSocketInterface {
     // Resetting streams can only be done on an established association that
     // supports stream resetting. Calling this method on e.g. a closed association
     // or streams that don't support resetting will not perform any operation.
-    ResetStreamsStatus resetStreams(List<Short> outgoingStreams);
+    @NotNull ResetStreamsStatus resetStreams(@NotNull List<Short> outgoingStreams);
 
     // Returns the number of bytes of data currently queued to be sent on a given
     // stream.
@@ -112,7 +114,7 @@ public interface DcSctpSocketInterface {
     // `null` will be returned. Note that metrics are not guaranteed to
     // be carried over if this socket is handed over by calling
     // `GetHandoverStateAndClose`.
-    Metrics getMetrics();
+    @NotNull Metrics getMetrics();
 
     // Returns empty bitmask if the socket is in the state in which a snapshot of
     // the state can be made by `GetHandoverStateAndClose()`. Return value is
@@ -128,7 +130,4 @@ public interface DcSctpSocketInterface {
     // called on success.
     // NOTE: Skipped, not currently needed
     // DcSctpSocketHandoverState getHandoverStateAndClose();
-
-
-
 }

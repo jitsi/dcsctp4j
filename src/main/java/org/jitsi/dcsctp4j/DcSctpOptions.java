@@ -15,6 +15,7 @@
  */
 package org.jitsi.dcsctp4j;
 
+import org.jetbrains.annotations.Nullable;
 import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
@@ -188,9 +189,10 @@ public class DcSctpOptions {
     // transient network issues. Setting this value may require changing
     // `max_retransmissions` and `max_init_retransmits` to ensure that the
     // connection is not closed too quickly.
+    @Nullable
     public native Long getMaxTimerBackoffDuration();
 
-    public native void setMaxTimerBackoffDuration(Long maxTimerBackoffDuration);
+    public native void setMaxTimerBackoffDuration(@Nullable Long maxTimerBackoffDuration);
 
     // Hearbeat interval (on idle connections only). Set to zero to disable.
     public native long getHeartbeatInterval();
@@ -258,15 +260,17 @@ public class DcSctpOptions {
 
     // Maximum Data Retransmit Attempts (per DATA chunk). Set to absl::nullopt for
     // no limit.
+    @Nullable
     public native Integer getMaxRetransmissions();
 
-    public native void setMaxRetransmissions(Integer maxRetransmissions);
+    public native void setMaxRetransmissions(@Nullable Integer maxRetransmissions);
 
     // Max.Init.Retransmits (https://tools.ietf.org/html/rfc4960#section-15). Set
     // to absl::nullopt for no limit.
+    @Nullable
     public native Integer getMaxInitRetransmits();
 
-    public native void setMaxInitRetransmits(Integer maxInitRetransmits);
+    public native void setMaxInitRetransmits(@Nullable Integer maxInitRetransmits);
 
     // RFC3758 Partial Reliability Extension
     public native boolean isEnablePartialReliability();

@@ -16,6 +16,8 @@
 
 package org.jitsi.dcsctp4j;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import smjni.jnigen.ExposeToNative;
 
 import java.util.Arrays;
@@ -41,10 +43,10 @@ public class DcSctpSocketFactory {
     private static native void destruct(long ptr);
 
     public DcSctpSocketInterface create(
-            String logPrefix,
-            DcSctpSocketCallbacks callbacks,
-            PacketObserver packetObserver,
-            DcSctpOptions options)
+            @NotNull String logPrefix,
+            @NotNull DcSctpSocketCallbacks callbacks,
+            @Nullable PacketObserver packetObserver,
+            @NotNull DcSctpOptions options)
     {
         long socketPtr = create_(ptr, logPrefix, callbacks, packetObserver, options);
         return new NativeSctpSocket(socketPtr);
@@ -52,10 +54,10 @@ public class DcSctpSocketFactory {
 
     private native long create_(
             long ptr,
-            String logPrefix,
-            DcSctpSocketCallbacks callbacks,
-            PacketObserver packetObserver,
-            DcSctpOptions options);
+            @NotNull String logPrefix,
+            @NotNull DcSctpSocketCallbacks callbacks,
+            @Nullable PacketObserver packetObserver,
+            @NotNull DcSctpOptions options);
 
     @ExposeToNative
     static private class NativeSctpSocket implements DcSctpSocketInterface {
@@ -66,7 +68,7 @@ public class DcSctpSocketFactory {
         }
 
         @Override
-        public void receivePacket(byte[] data, int offset, int length)
+        public void receivePacket(@NotNull byte[] data, int offset, int length)
         {
             if (offset + length > data.length) {
                 throw new IllegalArgumentException("Array length " + data.length +
@@ -106,6 +108,7 @@ public class DcSctpSocketFactory {
 
         private native void close_(long ptr);
 
+        @NotNull
         @Override
         public SocketState state() {
             return state_(ptr);
@@ -113,6 +116,7 @@ public class DcSctpSocketFactory {
 
         private native SocketState state_(long ptr);
 
+        @NotNull
         @Override
         public DcSctpOptions options() {
             return options_(ptr);
@@ -134,8 +138,9 @@ public class DcSctpSocketFactory {
 
         private native short getStreamPriority_(long ptr, short streamId);
 
+        @NotNull
         @Override
-        public SendStatus send(DcSctpMessage message, SendOptions options) {
+        public SendStatus send(@NotNull DcSctpMessage message, @NotNull SendOptions options) {
             /* This is expected to be one of the most common methods, so unwrap the java objects to minimize the JNI
              * overhead */
             int nativeStatus = send_(ptr,
@@ -146,8 +151,9 @@ public class DcSctpSocketFactory {
 
         private native int send_(long ptr, byte[] payload, int ppid, short streamID, boolean isUnordered, Long lifetime, Long maxRetransmissions, long lifecycleId);
 
+        @NotNull
         @Override
-        public List<SendStatus> sendMany(List<DcSctpMessage> messages, SendOptions options) {
+        public List<SendStatus> sendMany(@NotNull List<DcSctpMessage> messages, @NotNull SendOptions options) {
             int[] nativeStatuses = sendMany_(ptr, messages.toArray(new DcSctpMessage[0]), options);
             return Arrays.stream(nativeStatuses).mapToObj(SendStatus::fromNativeStatus).collect(Collectors.toList());
         }
@@ -165,8 +171,9 @@ public class DcSctpSocketFactory {
             return ret;
         }
 
+        @NotNull
         @Override
-        public ResetStreamsStatus resetStreams(List<Short> outgoingStreams) {
+        public ResetStreamsStatus resetStreams(@NotNull List<Short> outgoingStreams) {
             return resetStreams_(ptr, unboxList(outgoingStreams));
         }
 
@@ -193,6 +200,7 @@ public class DcSctpSocketFactory {
 
         private native void setBufferedAmountLowThreshold_(long ptr, short streamId, long bytes);
 
+        @NotNull
         @Override
         public Metrics getMetrics() {
             return getMetrics_(ptr);

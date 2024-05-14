@@ -15,6 +15,7 @@
  */
 package org.jitsi.dcsctp4j;
 
+import org.jetbrains.annotations.NotNull;
 import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
@@ -23,7 +24,7 @@ import smjni.jnigen.ExposeToNative;
 // identifier (`ppid`).
 @ExposeToNative
 public class DcSctpMessage {
-    DcSctpMessage(short s, int p, byte[] pay)
+    public DcSctpMessage(short s, int p, @NotNull byte[] pay)
     {
         streamID = s;
         ppid = p;
@@ -43,7 +44,7 @@ public class DcSctpMessage {
     }
 
     // The payload of the message.
-    @CalledByNative
+    @CalledByNative @NotNull
     public byte[] getPayload() {
         return payload;
     }

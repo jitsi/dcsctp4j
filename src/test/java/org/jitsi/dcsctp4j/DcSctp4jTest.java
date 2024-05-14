@@ -15,6 +15,7 @@
  */
 package org.jitsi.dcsctp4j;
 
+import org.jetbrains.annotations.NotNull;
 import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.junit.jupiter.api.*;
@@ -58,7 +59,7 @@ public class DcSctp4jTest {
         Logger logger = new LoggerImpl("testException");
         TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null) {
             @Override
-            public Timeout createTimeout(DelayPrecision precision) {
+            public Timeout createTimeout(@NotNull DelayPrecision precision) {
                 throw new IllegalStateException("I'm not happy!");
             }
         };
@@ -201,7 +202,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     }
 
     @Override
-    public SendPacketStatus sendPacketWithStatus(byte[] data) {
+    public SendPacketStatus sendPacketWithStatus(@NotNull byte[] data) {
         logger.info("Sending " + data.length + " byte packet");
         if (dest == null) {
             return SendPacketStatus.kError;
@@ -228,10 +229,11 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     }
 
     @Override
-    public Timeout createTimeout(DelayPrecision precision) {
+    public Timeout createTimeout(@NotNull DelayPrecision precision) {
         return new TestTimeout(wrapper);
     }
 
+    @NotNull
     @Override
     public Instant Now() {
         return clock.instant();
@@ -243,7 +245,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     }
 
     @Override
-    public void OnMessageReceived(DcSctpMessage message) {
+    public void OnMessageReceived(@NotNull DcSctpMessage message) {
         String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
         logger.info("Message received: " +
@@ -253,14 +255,14 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     }
 
     @Override
-    public void OnError(ErrorKind error, String message) {
+    public void OnError(@NotNull ErrorKind error, @NotNull String message) {
         logger.info("Error received: " +
                 "errorKind " + error +
                 ", message " + message);
     }
 
     @Override
-    public void OnAborted(ErrorKind error, String message) {
+    public void OnAborted(@NotNull ErrorKind error, @NotNull String message) {
         logger.info("SCTP connection aborted: " +
                 "errorKind " + error +
                 ", message " + message);
@@ -290,18 +292,18 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     }
 
     @Override
-    public void OnStreamsResetFailed(short[] outgoing_streams, String reason) {
+    public void OnStreamsResetFailed(@NotNull short[] outgoing_streams, @NotNull String reason) {
         logger.info("Stream reset failed for outgoing streams " + join(outgoing_streams) +
                 ": " + reason);
     }
 
     @Override
-    public void OnStreamsResetPerformed(short[] outgoing_streams) {
+    public void OnStreamsResetPerformed(@NotNull short[] outgoing_streams) {
         logger.info("Stream reset performed for outgoing streams " + join(outgoing_streams));
     }
 
     @Override
-    public void OnIncomingStreamsReset(short[] incoming_streams) {
+    public void OnIncomingStreamsReset(@NotNull short[] incoming_streams) {
         logger.info("Incoming streams reset for streams " + join(incoming_streams));
     }
 }

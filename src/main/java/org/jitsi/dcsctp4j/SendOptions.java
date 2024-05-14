@@ -15,6 +15,7 @@
  */
 package org.jitsi.dcsctp4j;
 
+import org.jetbrains.annotations.Nullable;
 import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
@@ -28,12 +29,12 @@ public class SendOptions {
     // If set, will discard messages that haven't been correctly sent and
     // received before the lifetime has expired. This is only available if the
     // peer supports Partial Reliability Extension (RFC3758).
-    @CalledByNative
+    @CalledByNative @Nullable
     Long lifetime = null;
 
     // If set, limits the number of retransmissions. This is only available
     // if the peer supports Partial Reliability Extension (RFC3758).
-    @CalledByNative
+    @CalledByNative @Nullable
     Long maxRetransmissions = null;
 
     // If set, will generate lifecycle events for this message. See e.g.

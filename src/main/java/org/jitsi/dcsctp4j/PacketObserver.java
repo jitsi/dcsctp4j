@@ -15,6 +15,7 @@
  */
 package org.jitsi.dcsctp4j;
 
+import org.jetbrains.annotations.NotNull;
 import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
@@ -25,10 +26,10 @@ public interface PacketObserver {
     // Called when a packet is sent, with the current time (in milliseconds) as
     // `now`, and the packet payload as `payload`.
     @CalledByNative
-    void OnSentPacket(long now, byte[] payload);
+    void OnSentPacket(long now, @NotNull byte[] payload);
 
     // Called when a packet is received, with the current time (in milliseconds)
     // as `now`, and the packet payload as `payload`.
     @CalledByNative
-    void OnReceivedPacket(long now, byte[] payload);
+    void OnReceivedPacket(long now, @NotNull byte[] payload);
 }

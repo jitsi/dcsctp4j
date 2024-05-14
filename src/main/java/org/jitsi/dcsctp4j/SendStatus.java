@@ -46,7 +46,7 @@ public enum SendStatus {
     SendStatus(int n) {
         nativeStatus = n;
     }
-    public static SendStatus fromNativeStatus(int nativeStatus) {
+    static SendStatus fromNativeStatus(int nativeStatus) {
         SendStatus javaStatus;
         switch(nativeStatus) {
             case 0:
