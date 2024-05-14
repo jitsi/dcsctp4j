@@ -16,6 +16,7 @@
 package org.jitsi.dcsctp4j;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
@@ -114,7 +115,8 @@ public interface DcSctpSocketInterface {
     // `null` will be returned. Note that metrics are not guaranteed to
     // be carried over if this socket is handed over by calling
     // `GetHandoverStateAndClose`.
-    @NotNull Metrics getMetrics();
+    @Nullable
+    Metrics getMetrics();
 
     // Returns empty bitmask if the socket is in the state in which a snapshot of
     // the state can be made by `GetHandoverStateAndClose()`. Return value is

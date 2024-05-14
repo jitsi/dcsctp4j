@@ -208,7 +208,14 @@ NATIVE_EPILOG
 jMetrics JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getMetrics_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
 NATIVE_PROLOG
-    /* TODO */
+    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+
+    auto metrics = nativeSocket->socket->GetMetrics();
+    if (!metrics) {
+        return nullptr;
+    }
+    Metrics* metricsP = new Metrics(*metrics);
+    return java_classes::get<Metrics_class>().ctor(env, (jlong)(intptr_t)metricsP).release();
 NATIVE_EPILOG_Z
 }
 

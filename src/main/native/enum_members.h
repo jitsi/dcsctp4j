@@ -94,6 +94,26 @@ public:
     jResetStreamsStatus map(JNIEnv *, dcsctp::ResetStreamsStatus) const;
 };
 
+class SctpImplementation_members
+{
+public:
+    SctpImplementation_members(JNIEnv * env);
+
+    jMetrics_SctpImplementation kUnknown() const { return m_kUnknown.c_ptr(); }
+    jMetrics_SctpImplementation kDcsctp() const { return m_kDcsctp.c_ptr(); }
+    jMetrics_SctpImplementation kUsrSctp() const { return m_kUsrSctp.c_ptr(); }
+    jMetrics_SctpImplementation kOther() const { return m_kOther.c_ptr(); }
+
+private:
+    smjni::global_java_ref<jMetrics_SctpImplementation> m_kUnknown;
+    smjni::global_java_ref<jMetrics_SctpImplementation> m_kDcsctp;
+    smjni::global_java_ref<jMetrics_SctpImplementation> m_kUsrSctp;
+    smjni::global_java_ref<jMetrics_SctpImplementation> m_kOther;
+
+public:
+    jMetrics_SctpImplementation map(JNIEnv *, dcsctp::SctpImplementation) const;
+};
+
 class SendPacketStatus_members
 {
 public:
@@ -182,7 +202,7 @@ private:
 };
 
 #define ENUM_MEMBERS DelayPrecision_members, ErrorKind_members, LoggingSeverity_members, \
-        ResetStreamsStatus_members, SendPacketStatus_members, SendStatus_members, SocketState_members
+        ResetStreamsStatus_members, SctpImplementation_members, SendPacketStatus_members, SendStatus_members, SocketState_members
 
 template<typename... Classes>
     enum_members_table<Classes...> * enum_members_table<Classes...>::instance = nullptr;

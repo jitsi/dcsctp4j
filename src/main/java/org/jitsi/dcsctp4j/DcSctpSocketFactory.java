@@ -200,7 +200,7 @@ public class DcSctpSocketFactory {
 
         private native void setBufferedAmountLowThreshold_(long ptr, short streamId, long bytes);
 
-        @NotNull
+        @Nullable
         @Override
         public Metrics getMetrics() {
             return getMetrics_(ptr);

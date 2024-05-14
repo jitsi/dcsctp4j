@@ -659,3 +659,132 @@ NATIVE_PROLOG
     options->zero_checksum_alternate_error_detection_method = ZeroChecksumAlternateErrorDetectionMethod(zeroChecksumAlternateErrorDetectionMethod);
 NATIVE_EPILOG
 }
+
+
+void JNICALL Metrics_class::destruct(JNIEnv* env, jclass, jlong ptr)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)ptr;
+    delete metrics;
+NATIVE_EPILOG
+}
+
+jlong JNICALL Metrics_class::getTxPacketsCount(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->tx_packets_count;
+NATIVE_EPILOG_Z
+}
+
+jlong JNICALL Metrics_class::getTxMessagesCount(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->tx_messages_count;
+NATIVE_EPILOG_Z
+}
+
+jlong JNICALL Metrics_class::getRtxPacketsCount(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->rtx_packets_count;
+NATIVE_EPILOG_Z
+}
+
+jlong JNICALL Metrics_class::getRtxBytesCount(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->rtx_bytes_count;
+NATIVE_EPILOG_Z
+}
+
+jlong JNICALL Metrics_class::getCwndBytes(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->cwnd_bytes;
+NATIVE_EPILOG_Z
+}
+
+jint JNICALL Metrics_class::getSrttMs(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->srtt_ms;
+NATIVE_EPILOG_Z
+}
+
+jlong JNICALL Metrics_class::getUnackDataCount(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->unack_data_count;
+NATIVE_EPILOG_Z
+}
+
+jlong JNICALL Metrics_class::getRxPacketsCount(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->rx_packets_count;
+NATIVE_EPILOG_Z
+}
+
+jlong JNICALL Metrics_class::getRxMessagesCount(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->rx_messages_count;
+NATIVE_EPILOG_Z
+}
+
+jint JNICALL Metrics_class::getPeerRwndBytes(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->peer_rwnd_bytes;
+NATIVE_EPILOG_Z
+}
+
+jMetrics_SctpImplementation JNICALL Metrics_class::getPeerImplementation(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return enum_members::get<SctpImplementation_members>().map(env, metrics->peer_implementation);
+NATIVE_EPILOG_Z
+}
+
+jboolean JNICALL Metrics_class::usesMessageInterleaving(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->uses_message_interleaving;
+NATIVE_EPILOG_Z
+}
+
+jboolean JNICALL Metrics_class::usesZeroChecksum(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->uses_zero_checksum;
+NATIVE_EPILOG_Z
+}
+
+jshort JNICALL Metrics_class::getNegotiatedMaximumIncomingStreams(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->negotiated_maximum_incoming_streams;
+NATIVE_EPILOG_Z
+}
+
+jshort JNICALL Metrics_class::getNegotiatedMaximumOutgoingStreams(JNIEnv* env, jMetrics jmetrics)
+{
+NATIVE_PROLOG
+    auto metrics = (Metrics*)(intptr_t)java_classes::get<Metrics_class>().get_ptr(env, jmetrics);
+    return metrics->negotiated_maximum_outgoing_streams;
+NATIVE_EPILOG_Z
+}

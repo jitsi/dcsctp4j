@@ -135,6 +135,31 @@ jResetStreamsStatus ResetStreamsStatus_members::map(JNIEnv *env, ResetStreamsSta
 }
 
 
+SctpImplementation_members::SctpImplementation_members(JNIEnv * env) :
+    m_kUnknown(java_classes::get<Metrics_SctpImplementation_class>().get_kUnknown(env)),
+    m_kDcsctp(java_classes::get<Metrics_SctpImplementation_class>().get_kDcsctp(env)),
+    m_kUsrSctp(java_classes::get<Metrics_SctpImplementation_class>().get_kUsrSctp(env)),
+    m_kOther(java_classes::get<Metrics_SctpImplementation_class>().get_kOther(env))
+{}
+
+jMetrics_SctpImplementation SctpImplementation_members::map(JNIEnv *env, SctpImplementation sctpImplementation) const
+{
+    switch (sctpImplementation) {
+    case SctpImplementation::kUnknown:
+        return kUnknown();
+    case SctpImplementation::kDcsctp:
+        return kDcsctp();
+    case SctpImplementation::kUsrSctp:
+        return kUsrSctp();
+    case SctpImplementation::kOther:
+        return kOther();
+    default:
+        auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Invalid value for SctpImplementation"));
+        throw java_exception(ex);
+    }
+}
+
+
 SendPacketStatus_members::SendPacketStatus_members(JNIEnv * env) :
     m_kSuccess(java_classes::get<SendPacketStatus_class>().get_kSuccess(env)),
     m_kTemporaryFailure(java_classes::get<SendPacketStatus_class>().get_kTemporaryFailure(env)),
