@@ -19,7 +19,6 @@ import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
@@ -80,7 +79,7 @@ public class LogProxy {
 
         loggerDelegate.log(record);
     }
-   private native long registerNative(LoggingSeverity minSeverity);
+    private native long registerNative(LoggingSeverity minSeverity);
 
     private static native void destruct(long nativePtr);
 
