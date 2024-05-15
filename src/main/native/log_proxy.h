@@ -14,7 +14,7 @@ public:
 
 private:
     static void initialize_and_register(JNIEnv * env);
-    LogProxy * instance;
+    static LogProxy * instance;
 
     smjni::global_java_ref<jLogProxy> logProxy;
 };

@@ -26,6 +26,8 @@ LogProxy::~LogProxy()
     }
 }
 
+LogProxy* LogProxy::instance = nullptr;
+
 void LogProxy::OnLogMessage(const string& message)
 {
     /* Shouldn't be called, because we're wrapping OnLogMessage(const LogLineRef&) */
