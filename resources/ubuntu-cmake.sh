@@ -54,6 +54,7 @@ cmake -B cmake-build-"$DEBARCH" \
     -DCMAKE_INSTALL_PREFIX="src/main/resources/linux-$JNAARCH" \
     -DWEBRTC_HOME="$WEBRTC_HOME" \
     -DWEBRTC_OBJ="$WEBRTC_OBJ" \
-    -DCMAKE_TOOLCHAIN_FILE:PATH="$TOOLCHAIN_FILE"
+    -DCMAKE_TOOLCHAIN_FILE:PATH="$TOOLCHAIN_FILE" \
+    -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
-cmake --build cmake-build-"$DEBARCH" --config RelWithDebInfo --target install $CMAKE_BUILD_ARGS
+cmake --build cmake-build-"$DEBARCH" --target install $CMAKE_BUILD_ARGS
