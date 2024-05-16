@@ -48,8 +48,8 @@ then
     CMAKE_BUILD_ARGS=" -- $MAKE_ARGS"
 fi
 
-rm -rf cmake-build-"$DEBARCH"
-cmake -B cmake-build-"$DEBARCH" \
+rm -rf cmake-build-linux-"$DEBARCH"
+cmake -B cmake-build-linux-"$DEBARCH" \
     -DJAVA_HOME="$JAVA_HOME" \
     -DCMAKE_INSTALL_PREFIX="src/main/resources/linux-$JNAARCH" \
     -DWEBRTC_HOME="$WEBRTC_HOME" \
@@ -57,4 +57,4 @@ cmake -B cmake-build-"$DEBARCH" \
     -DCMAKE_TOOLCHAIN_FILE:PATH="$TOOLCHAIN_FILE" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
-cmake --build cmake-build-"$DEBARCH" --target install $CMAKE_BUILD_ARGS
+cmake --build cmake-build-linux-"$DEBARCH" --target install $CMAKE_BUILD_ARGS
