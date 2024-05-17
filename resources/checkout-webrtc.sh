@@ -10,6 +10,7 @@ if [ "$#" -ne 3 ]; then
 fi;
 
 set -e
+export -n SHELLOPTS # Makes depot-tools fail
 
 DEPOT_TOOLS_DIR=$1
 WEBRTC_DIR=$2

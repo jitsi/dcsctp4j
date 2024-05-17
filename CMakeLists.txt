@@ -43,6 +43,13 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
                       dcsctp
                       )
 
+# WebRTC log framework uses CoreServices if NDEBUG
+if(APPLE)
+        target_link_libraries(${PROJECT_NAME} PRIVATE
+        "-framework CoreServices"
+        )
+endif()
+
 # Need to set this to be able to safely include rtc_base/logging.h.
 # TODO: adjust if you port to Windows.
 target_compile_definitions(${PROJECT_NAME} PUBLIC
@@ -58,8 +65,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME} PUBLIC
                            ${JNI_INCLUDE_DIRS}
                            ${CMAKE_CURRENT_LIST_DIR}/target/native/jnigen
-                           ${WEBRTC_HOME}
-                           ${WEBRTC_HOME}/third_party/abseil-cpp
+                           ${WEBRTC_DIR}
+                           ${WEBRTC_DIR}/third_party/abseil-cpp
                            )
 
 install(TARGETS ${PROJECT_NAME}
