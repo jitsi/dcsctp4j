@@ -18,19 +18,23 @@ package org.jitsi.dcsctp4j;
 import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
-// Return value of DcSctpSocketCallbacks::SendPacketWithStatus.
+/** Return value of {@link DcSctpSocketCallbacks#sendPacketWithStatus}. */
 @ExposeToNative
 public enum SendPacketStatus {
-    // Indicates that the packet was successfully sent. As sending is unreliable,
-    // there are no guarantees that the packet was actually delivered.
+    /**
+     * Indicates that the packet was successfully sent. As sending is unreliable,
+     * there are no guarantees that the packet was actually delivered.
+     */
     @CalledByNative
     kSuccess(0),
-    // The packet was not sent due to a temporary failure, such as the local send
-    // buffer becoming exhausted. This return value indicates that the socket will
-    // recover and sending that packet can be retried at a later time.
+    /**
+     * The packet was not sent due to a temporary failure, such as the local send
+     * buffer becoming exhausted. This return value indicates that the socket will
+     * recover and sending that packet can be retried at a later time.
+     */
     @CalledByNative
     kTemporaryFailure(1),
-    // The packet was not sent due to other reasons.
+    /** The packet was not sent due to other reasons. */
     @CalledByNative
     kError(2);
 

@@ -29,7 +29,7 @@ public class DcSctpSocketFactory {
     private final long ptr;
 
     public DcSctpSocketFactory() {
-        // Force load of DcSctp4j
+        /** Force load of DcSctp4j */
         if (DcSctp4j.CLEANER == null) {
             throw new IllegalStateException();
         }

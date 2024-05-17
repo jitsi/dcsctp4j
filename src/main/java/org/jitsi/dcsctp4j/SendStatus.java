@@ -20,24 +20,32 @@ import smjni.jnigen.ExposeToNative;
 
 @ExposeToNative
 public enum SendStatus {
-    // The message was enqueued successfully. As sending the message is done
-    // asynchronously, this is no guarantee that the message has been actually
-    // sent.
+    /**
+     * The message was enqueued successfully. As sending the message is done
+     * asynchronously, this is no guarantee that the message has been actually
+     * sent.
+     */
     @CalledByNative
     kSuccess(0),
-    // The message was rejected as the payload was empty (which is not allowed in
-    // SCTP).
+    /**
+     * The message was rejected as the payload was empty (which is not allowed in
+     * SCTP).
+     */
     @CalledByNative
     kErrorMessageEmpty(1),
-    // The message was rejected as the payload was larger than what has been set
-    // as `DcSctpOptions.max_message_size`.
+    /**
+     * The message was rejected as the payload was larger than what has been set
+     * as `DcSctpOptions.max_message_size`.
+     */
     @CalledByNative
     kErrorMessageTooLarge(2),
-    // The message could not be enqueued as the socket is out of resources. This
-    // mainly indicates that the send queue is full.
+    /**
+     * The message could not be enqueued as the socket is out of resources. This
+     * mainly indicates that the send queue is full.
+     */
     @CalledByNative
     kErrorResourceExhaustion(3),
-    // The message could not be sent as the socket is shutting down.
+    /** The message could not be sent as the socket is shutting down. */
     @CalledByNative
     kErrorShuttingDown(4);
 

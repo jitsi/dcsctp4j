@@ -19,31 +19,33 @@ import org.jetbrains.annotations.NotNull;
 import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
-// An SCTP message is a group of bytes sent and received as a whole on a
-// specified stream identifier (`stream_id`), and with a payload protocol
-// identifier (`ppid`).
+/**
+ * An SCTP message is a group of bytes sent and received as a whole on a
+ * specified stream identifier (`stream_id`), and with a payload protocol
+ * identifier (`ppid`).
+ */
 @ExposeToNative
 public class DcSctpMessage {
-    public DcSctpMessage(short s, int p, @NotNull byte[] pay)
+    public DcSctpMessage(short stream_id, int ppid, @NotNull byte[] pay)
     {
-        streamID = s;
-        ppid = p;
+        this.streamID = stream_id;
+        this.ppid = ppid;
         payload = pay;
     }
 
-    // The stream identifier to which the message is sent.
+    /** The stream identifier to which the message is sent. */
     @CalledByNative
     public short getStreamID() {
         return streamID;
     }
 
-    // The payload protocol identifier (ppid) associated with the message.
+    /** The payload protocol identifier (ppid) associated with the message. */
     @CalledByNative
     public int getPpid() {
         return ppid;
     }
 
-    // The payload of the message.
+    /** The payload of the message. */
     @CalledByNative @NotNull
     public byte[] getPayload() {
         return payload;

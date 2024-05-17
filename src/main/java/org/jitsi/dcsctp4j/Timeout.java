@@ -18,32 +18,40 @@ package org.jitsi.dcsctp4j;
 import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
-// A very simple timeout that can be started and stopped. When started,
-// it will be given a unique `timeout_id` which should be provided to
-// `DcSctpSocket::HandleTimeout` when it expires.
+/**
+ * A very simple timeout that can be started and stopped. When started,
+ * it will be given a unique `timeout_id` which should be provided to
+ * {@link DcSctpSocketInterface#handleTimeout} when it expires.
+ */
 @ExposeToNative
 public interface Timeout {
-    // Called to start time timeout, with the duration in milliseconds as
-    // `duration` and with the timeout identifier as `timeout_id`, which - if
-    // the timeout expires - shall be provided to `DcSctpSocket::HandleTimeout`.
-    //
-    // `Start` and `Stop` will always be called in pairs. In other words will
-    // ´Start` never be called twice, without a call to `Stop` in between.
+    /**
+     * Called to start time timeout, with the duration in milliseconds as
+     * `duration` and with the timeout identifier as `timeout_id`, which - if
+     * the timeout expires - shall be provided to `DcSctpSocket::HandleTimeout`.
+     *
+     * `Start` and `Stop` will always be called in pairs. In other words will
+     * ´Start` never be called twice, without a call to `Stop` in between.
+     */
     @CalledByNative
     void start(long duration, long timeoutId);
 
-    // Called to stop the running timeout.
-    //
-    // `Start` and `Stop` will always be called in pairs. In other words will
-    // ´Start` never be called twice, without a call to `Stop` in between.
-    //
-    // `Stop` will always be called prior to releasing this object.
+    /**
+     * Called to stop the running timeout.
+     *
+     * `Start` and `Stop` will always be called in pairs. In other words will
+     * ´Start` never be called twice, without a call to `Stop` in between.
+     *
+     * `Stop` will always be called prior to releasing this object.
+     */
     @CalledByNative
     void stop();
 
-    // Called to restart an already running timeout, with the `duration` and
-    // `timeout_id` parameters as described in `Start`. This can be overridden by
-    // the implementation to restart it more efficiently.
+    /**
+     * Called to restart an already running timeout, with the `duration` and
+     * `timeout_id` parameters as described in `Start`. This can be overridden by
+     * the implementation to restart it more efficiently.
+     */
     @CalledByNative
     default void restart(long durationMs, long timeoutId) {
         stop();
