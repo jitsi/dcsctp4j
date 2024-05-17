@@ -35,22 +35,23 @@ else
 fi
 
 
+# See if they specified the WebRTC src dir rather than its parent
+if test "$(basename "$WEBRTC_DIR")" = "src"; then
+    WEBRTC_DIR="$(dirname $WEBRTC_DIR)"
+fi
+
 if test -d "$WEBRTC_DIR"; then
-    # See if they specified the WebRTC src dir rather than its parent
-    if test -d "$WEBRTC_DIR/.git" -a "$(basename "$WEBRTC_DIR")" = "src"; then
-        WEBRTC_DIR="$(dirname $WEBRTC_DIR)"
-    fi
     if test -r "$WEBRTC_DIR/.gclient"; then
         # Already existing gclient checkout; continue
         cd "$WEBRTC_DIR"
     elif test -n "$(ls -A "$WEBRTC_DIR")"; then
         echo "ERROR: $WEBRTC_DIR exists, does not seem to be a gclient checkout, but is non-empty"
         exit 1
-    else
-        mkdir -p "$WEBRTC_DIR"
-        cd "$WEBRTC_DIR"
-        fetch --nohooks webrtc
     fi
+else
+    mkdir -p "$WEBRTC_DIR"
+    cd "$WEBRTC_DIR"
+    fetch --nohooks webrtc
 fi
 
 gclient sync -r $REV -D

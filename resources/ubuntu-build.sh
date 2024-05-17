@@ -39,6 +39,11 @@ if [ $DEBARCH != $NATIVEDEBARCH -a -f "cmake/$DEBARCH-linux-gnu.cmake" ]; then
     TOOLCHAIN_FILE="cmake/$DEBARCH-linux-gnu.cmake"
 fi
 
+if test \! -d $WEBRTC_DIR/.git -a -r $WEBRTC_DIR/.gclient -a -d $WEBRTC_DIR/src/.git; then
+    # They specified the WebRTC gclient directory, not the src checkout subdirectory
+    WEBRTC_DIR=$WEBRTC_DIR/src
+fi
+
 WEBRTC_BUILD=out/linux-$GN_ARCH
 WEBRTC_OBJ=$WEBRTC_DIR/$WEBRTC_BUILD
 
@@ -47,9 +52,8 @@ PATH=$PATH:$DEPOT_TOOLS_DIR
 startdir=$PWD
 
 cd $WEBRTC_DIR
-if test -d "$WEBRTC_BUILD"; then
-    gn clean $WEBRTC_BUILD
-fi
+./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
+rm -rf $WEBRTC_BUILD
 gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=false symbol_level=2"
 ninja -C $WEBRTC_BUILD dcsctp
 
