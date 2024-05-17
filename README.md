@@ -16,8 +16,8 @@ C++ files.
 ### A note on WebRTC
 Because the checked-out Google source repositories are large, the build scripts provide an option to use
 already checked-out versions of DepotTools and WebRTC.  Pass the path name of the these checkouts to the
-build scripts; the repository will be updated to the latest DepotTools, and to the version of WebRTC specified
-in `resources/WebRTC-revision.txt`.
+build scripts; the DepotTools repository will be updated to the latest version, and the WebRTC repository
+to the version specified in `resources/WebRTC-revision.txt`.
 
 ### Ubuntu
 
@@ -38,7 +38,7 @@ $ git submodule update --init
 ```
 $ mvn compile
 ```
-* Build the libraries (adjusting the paths to DepotTools and WebRTC as desired)
+* Check out WebRTC and build the libraries (adjusting the paths to DepotTools and WebRTC as desired)
 ```
 $ resources/ubuntu-build-all.sh ~/DepotTools ~/WebRTC
 ```
@@ -58,7 +58,7 @@ $ git submodule update --init
 ```
 $ mvn compile
 ```
-* Build the libraries (adjusting the paths to DepotTools and WebRTC as desired)
+* Check out WebRTC and build the libraries (adjusting the paths to DepotTools and WebRTC as desired)
 ```
 $ resources/macos-build-all.sh ~/DepotTools ~/WebRTC
 ```
