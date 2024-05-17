@@ -19,12 +19,12 @@ ARCH=$4
 case $ARCH in
     "x86-64"|"x86_64"|"amd64"|"x64")
         JNAARCH=x86-64
-        OSX_ARCH=x86_64
+        DEBARCH=x86_64
         GN_ARCH=x64
         ;;
     "arm64"|"aarch64")
         JNAARCH=aarch64
-        OSX_ARCH=arm64
+        DEBARCH=arm64
         GN_ARCH=arm64
         ;;
     *)
@@ -33,7 +33,13 @@ case $ARCH in
 	;;
 esac
 
-WEBRTC_BUILD=out/macos-$GN_ARCH
+NATIVEDEBARCH=$(dpkg --print-architecture)
+
+if [ $DEBARCH != $NATIVEDEBARCH -a -f "cmake/$DEBARCH-linux-gnu.cmake" ]; then
+    TOOLCHAIN_FILE="cmake/$DEBARCH-linux-gnu.cmake"
+fi
+
+WEBRTC_BUILD=out/linux-$GN_ARCH
 WEBRTC_OBJ=$WEBRTC_DIR/$WEBRTC_BUILD
 
 PATH=$PATH:$DEPOT_TOOLS_DIR
@@ -49,7 +55,7 @@ ninja -C $WEBRTC_BUILD dcsctp
 
 cd $startdir
 
-NCPU=$(sysctl -n hw.ncpu)
+NCPU=$(nproc)
 if [ -n "$NCPU" -a "$NCPU" -gt 1 ]
 then
     MAKE_ARGS="-j $NCPU"
@@ -60,13 +66,13 @@ then
     CMAKE_BUILD_ARGS=" -- $MAKE_ARGS"
 fi
 
-
-rm -rf cmake-build-macos-"$OSX_ARCH"
-cmake -B cmake-build-macos-"$OSX_ARCH" \
+rm -rf cmake-build-linux-"$DEBARCH"
+cmake -B cmake-build-linux-"$DEBARCH" \
     -DJAVA_HOME="$JAVA_HOME" \
-    -DCMAKE_INSTALL_PREFIX="src/main/resources/darwin-$JNAARCH" \
-    -DCMAKE_OSX_ARCHITECTURES="$OSX_ARCH" \
+    -DCMAKE_INSTALL_PREFIX="src/main/resources/linux-$JNAARCH" \
     -DWEBRTC_DIR="$WEBRTC_DIR" \
     -DWEBRTC_OBJ="$WEBRTC_OBJ" \
+    -DCMAKE_TOOLCHAIN_FILE:PATH="$TOOLCHAIN_FILE" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
-cmake --build cmake-build-macos-"$OSX_ARCH" --target install $CMAKE_BUILD_ARGS
+
+cmake --build cmake-build-linux-"$DEBARCH" --target install $CMAKE_BUILD_ARGS

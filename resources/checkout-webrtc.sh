@@ -23,13 +23,14 @@ if test -d "$DEPOT_TOOLS_DIR"; then
         echo "ERROR: $DEPOT_TOOLS_DIR exists, but does not seem to be a Git repository"
         exit 1
     fi
-    PATH="$PATH:$DEPOT_TOOLS_REPO"
+    PATH="$PATH:$DEPOT_TOOLS_DIR"
     update_depot_tools
 else
     parent="$(dirname "$DEPOT_TOOLS_DIR")"
     mkdir -p "$parent"
     cd "$parent"
     git clone "$DEPOT_TOOLS_REPO"
+    PATH="$PATH:$DEPOT_TOOLS_DIR"
     cd "$STARTDIR"
 fi
 
