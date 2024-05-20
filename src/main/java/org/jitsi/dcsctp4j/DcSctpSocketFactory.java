@@ -29,7 +29,7 @@ public class DcSctpSocketFactory {
     private final long ptr;
 
     public DcSctpSocketFactory() {
-        /** Force load of DcSctp4j */
+        // Force load of DcSctp4j
         if (DcSctp4j.CLEANER == null) {
             throw new IllegalStateException();
         }
@@ -68,7 +68,7 @@ public class DcSctpSocketFactory {
         }
 
         @Override
-        public void receivePacket(@NotNull byte[] data, int offset, int length)
+        public synchronized void receivePacket(@NotNull byte[] data, int offset, int length)
         {
             if (offset + length > data.length) {
                 throw new IllegalArgumentException("Array length " + data.length +
@@ -80,7 +80,7 @@ public class DcSctpSocketFactory {
         private native void receivePacket_(long ptr, byte[] data, int offset, int length);
 
         @Override
-        public void handleTimeout(long timeoutId)
+        public synchronized void handleTimeout(long timeoutId)
         {
             handleTimeout_(ptr, timeoutId);
         }
@@ -88,21 +88,21 @@ public class DcSctpSocketFactory {
         private native void handleTimeout_(long ptr, long timeoutId);
 
         @Override
-        public void connect() {
+        public synchronized void connect() {
             connect_(ptr);
         }
 
         private native void connect_(long ptr);
 
         @Override
-        public void shutdown() {
+        public synchronized void shutdown() {
             shutdown_(ptr);
         }
 
         private native void shutdown_(long ptr);
 
         @Override
-        public void close() {
+        public synchronized void close() {
             close_(ptr);
         }
 
@@ -110,7 +110,7 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public SocketState state() {
+        public synchronized SocketState state() {
             return state_(ptr);
         }
 
@@ -118,21 +118,21 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public DcSctpOptions options() {
+        public synchronized DcSctpOptions options() {
             return options_(ptr);
         }
 
         private native DcSctpOptions options_(long ptr);
 
         @Override
-        public void setStreamPriority(short streamId, short streamPriority) {
+        public synchronized void setStreamPriority(short streamId, short streamPriority) {
             setStreamPriority_(ptr, streamId, streamPriority);
         }
 
         private native void setStreamPriority_(long ptr, short streamId, short streamPriority);
 
         @Override
-        public short getStreamPriority(short streamId) {
+        public synchronized short getStreamPriority(short streamId) {
             return getStreamPriority_(ptr, streamId);
         }
 
@@ -140,7 +140,7 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public SendStatus send(@NotNull DcSctpMessage message, @NotNull SendOptions options) {
+        public synchronized SendStatus send(@NotNull DcSctpMessage message, @NotNull SendOptions options) {
             /* This is expected to be one of the most common methods, so unwrap the java objects to minimize the JNI
              * overhead */
             int nativeStatus = send_(ptr,
@@ -153,7 +153,7 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public List<SendStatus> sendMany(@NotNull List<DcSctpMessage> messages, @NotNull SendOptions options) {
+        public synchronized List<SendStatus> sendMany(@NotNull List<DcSctpMessage> messages, @NotNull SendOptions options) {
             int[] nativeStatuses = sendMany_(ptr, messages.toArray(new DcSctpMessage[0]), options);
             return Arrays.stream(nativeStatuses).mapToObj(SendStatus::fromNativeStatus).collect(Collectors.toList());
         }
@@ -173,28 +173,28 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public ResetStreamsStatus resetStreams(@NotNull List<Short> outgoingStreams) {
+        public synchronized ResetStreamsStatus resetStreams(@NotNull List<Short> outgoingStreams) {
             return resetStreams_(ptr, unboxList(outgoingStreams));
         }
 
         private native ResetStreamsStatus resetStreams_(long ptr, short[] outgoingStreams);
 
         @Override
-        public long bufferedAmount(short streamId) {
+        public synchronized long bufferedAmount(short streamId) {
             return bufferedAmount_(ptr, streamId);
         }
 
         private native long bufferedAmount_(long ptr, short streamId);
 
         @Override
-        public long bufferedAmountLowThreshold(short streamId) {
+        public synchronized long bufferedAmountLowThreshold(short streamId) {
             return bufferedAmountLowThreshold_(ptr, streamId);
         }
 
         private native long bufferedAmountLowThreshold_(long ptr, short streamId);
 
         @Override
-        public void setBufferedAmountLowThreshold(short streamId, long bytes) {
+        public synchronized void setBufferedAmountLowThreshold(short streamId, long bytes) {
             setBufferedAmountLowThreshold_(ptr, streamId, bytes);
         }
 
@@ -202,7 +202,7 @@ public class DcSctpSocketFactory {
 
         @Nullable
         @Override
-        public Metrics getMetrics() {
+        public synchronized Metrics getMetrics() {
             return getMetrics_(ptr);
         }
 
