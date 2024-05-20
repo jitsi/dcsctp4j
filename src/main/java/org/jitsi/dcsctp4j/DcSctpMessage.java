@@ -25,7 +25,8 @@ import smjni.jnigen.ExposeToNative;
  * identifier (`ppid`).
  */
 @ExposeToNative
-public class DcSctpMessage {
+public class DcSctpMessage
+{
     public DcSctpMessage(short stream_id, int ppid, @NotNull byte[] pay)
     {
         this.streamID = stream_id;
@@ -35,19 +36,22 @@ public class DcSctpMessage {
 
     /** The stream identifier to which the message is sent. */
     @CalledByNative
-    public short getStreamID() {
+    public short getStreamID()
+    {
         return streamID;
     }
 
     /** The payload protocol identifier (ppid) associated with the message. */
     @CalledByNative
-    public int getPpid() {
+    public int getPpid()
+    {
         return ppid;
     }
 
     /** The payload of the message. */
     @CalledByNative @NotNull
-    public byte[] getPayload() {
+    public byte[] getPayload()
+    {
         return payload;
     }
 

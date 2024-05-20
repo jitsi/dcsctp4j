@@ -30,7 +30,8 @@ import smjni.jnigen.*;
  * calling a public method in {@link DcSctpSocketInterface}.
  */
 @ExposeToNative
-public interface DcSctpSocketCallbacks {
+public interface DcSctpSocketCallbacks
+{
 
     /**
      * Called when the library wants the packet serialized as `data` to be sent.
@@ -38,12 +39,12 @@ public interface DcSctpSocketCallbacks {
      * Note that it's NOT ALLOWED to call into this library from within this
      * callback.
      */
-    SendPacketStatus sendPacketWithStatus(
-            @NotNull byte[] data);
+    SendPacketStatus sendPacketWithStatus(@NotNull byte[] data);
 
     /** Version of sendPacketWithStatus optimizing JNI */
     @CalledByNative
-    default int sendPacketWithStatus_(@NotNull byte[] data) {
+    default int sendPacketWithStatus_(@NotNull byte[] data)
+    {
         return sendPacketWithStatus(data).nativeStatus;
     }
 
@@ -212,7 +213,8 @@ public interface DcSctpSocketCallbacks {
 
 
     @ExposeToNative
-    enum DelayPrecision {
+    enum DelayPrecision
+    {
         /**
          * This may include up to a 17 ms leeway in addition to OS timer precision.
          * See PostDelayedTask() for more information.

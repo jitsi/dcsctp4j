@@ -22,19 +22,23 @@ import org.jitsi.utils.logging2.LoggerImpl;
 
 import java.lang.ref.Cleaner;
 
-public class DcSctp4j {
-    private static final Logger logger =
-            new LoggerImpl(DcSctp4j.class.getName());
+public class DcSctp4j
+{
+    private static final Logger logger = new LoggerImpl(DcSctp4j.class.getName());
 
     static final Cleaner CLEANER = Cleaner.create();
 
-    static {
+    static
+    {
         // Load the native library
-        try {
+        try
+        {
             JNIUtils.loadLibrary("dcsctp4j", DcSctp4j.class.getClassLoader());
             LogProxy.register();
             logger.info("DcSctp4j lib loaded");
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             logger.error("Error loading native library: ", e);
         }
     }

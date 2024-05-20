@@ -24,7 +24,8 @@ import smjni.jnigen.ExposeToNative;
  * all sent and received packets.
  */
 @ExposeToNative
-public interface PacketObserver {
+public interface PacketObserver
+{
     /**
      * Called when a packet is sent, with the current time (in milliseconds) as
      * `now`, and the packet payload as `payload`.

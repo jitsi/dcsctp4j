@@ -24,7 +24,8 @@ import smjni.jnigen.ExposeToNative;
  * {@link DcSctpSocketInterface#handleTimeout} when it expires.
  */
 @ExposeToNative
-public interface Timeout {
+public interface Timeout
+{
     /**
      * Called to start time timeout, with the duration in milliseconds as
      * `duration` and with the timeout identifier as `timeout_id`, which - if
@@ -53,7 +54,8 @@ public interface Timeout {
      * the implementation to restart it more efficiently.
      */
     @CalledByNative
-    default void restart(long durationMs, long timeoutId) {
+    default void restart(long durationMs, long timeoutId)
+    {
         stop();
         start(durationMs, timeoutId);
     }

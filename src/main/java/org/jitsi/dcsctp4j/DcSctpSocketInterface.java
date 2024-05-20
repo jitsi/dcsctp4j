@@ -20,7 +20,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public interface DcSctpSocketInterface {
+public interface DcSctpSocketInterface
+{
     /** To be called when an incoming SCTP packet is to be processed. */
     void receivePacket(@NotNull byte[] data, int offset, int length);
 

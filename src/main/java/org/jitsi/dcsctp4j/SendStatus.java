@@ -19,7 +19,8 @@ import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 @ExposeToNative
-public enum SendStatus {
+public enum SendStatus
+{
     /**
      * The message was enqueued successfully. As sending the message is done
      * asynchronously, this is no guarantee that the message has been actually
@@ -51,12 +52,15 @@ public enum SendStatus {
 
     public final int nativeStatus;
 
-    SendStatus(int n) {
+    SendStatus(int n)
+    {
         nativeStatus = n;
     }
-    static SendStatus fromNativeStatus(int nativeStatus) {
+    static SendStatus fromNativeStatus(int nativeStatus)
+    {
         SendStatus javaStatus;
-        switch(nativeStatus) {
+        switch(nativeStatus)
+        {
             case 0:
                 javaStatus = kSuccess;
                 break;
@@ -75,7 +79,8 @@ public enum SendStatus {
             default:
                 throw new IllegalArgumentException("Bad native status value " + nativeStatus);
         }
-        if (javaStatus.nativeStatus != nativeStatus) {
+        if (javaStatus.nativeStatus != nativeStatus)
+        {
             throw new IllegalStateException("native status " + nativeStatus + " was mapped to java status " +
                     javaStatus + " == " + javaStatus.nativeStatus);
         }

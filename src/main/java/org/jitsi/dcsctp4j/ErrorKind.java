@@ -19,7 +19,8 @@ import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 @ExposeToNative
-public enum ErrorKind {
+public enum ErrorKind
+{
     /**
      * Indicates that no error has occurred. This will never be the case when
      * {@link DcSctpSocketCallbacks#OnError} or {@link DcSctpSocketCallbacks#OnAborted} is called.

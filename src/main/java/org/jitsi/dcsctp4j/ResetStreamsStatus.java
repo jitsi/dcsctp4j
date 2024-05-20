@@ -20,7 +20,8 @@ import smjni.jnigen.ExposeToNative;
 
 /** Return value of ResetStreams. */
 @ExposeToNative
-public enum ResetStreamsStatus {
+public enum ResetStreamsStatus
+{
     /** If the connection is not yet established, this will be returned. */
     @CalledByNative
     kNotConnected,

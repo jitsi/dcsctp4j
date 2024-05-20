@@ -24,7 +24,8 @@ import smjni.jnigen.ExposeToNative;
  * will be unset when they are not yet known.
  */
 @ExposeToNative
-public class Metrics {
+public class Metrics
+{
     @CalledByNative
     private final long ptr;
 
@@ -122,7 +123,8 @@ public class Metrics {
 
     /** Represent known SCTP implementations. */
     @ExposeToNative
-    public enum SctpImplementation {
+    public enum SctpImplementation
+    {
         /** There is not enough information toto determine any SCTP implementation. */
         @CalledByNative
         kUnknown,

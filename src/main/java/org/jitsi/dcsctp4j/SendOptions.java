@@ -21,7 +21,8 @@ import smjni.jnigen.ExposeToNative;
 
 /** Send options for sending messages */
 @ExposeToNative
-public class SendOptions {
+public class SendOptions
+{
     /** If the message should be sent with unordered message delivery. */
     @CalledByNative
     public boolean isUnordered = false;

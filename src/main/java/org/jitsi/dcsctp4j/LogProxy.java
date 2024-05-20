@@ -23,9 +23,11 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 @ExposeToNative
-public class LogProxy {
+public class LogProxy
+{
     private final long nativePtr;
-    private final java.util.logging.Logger loggerDelegate = java.util.logging.Logger.getLogger(DcSctp4j.class.getName());
+    private final java.util.logging.Logger loggerDelegate =
+            java.util.logging.Logger.getLogger(DcSctp4j.class.getName());
 
     LogProxy()
     {
@@ -35,8 +37,9 @@ public class LogProxy {
     }
 
     @CalledByNative
-    void onLogMessage(String message, String filename, int line, Integer threadId, long timestampUs, LoggingSeverity severity) {
-
+    void onLogMessage(String message, String filename, int line,
+                      Integer threadId, long timestampUs, LoggingSeverity severity)
+    {
         /* WebRTC log messages have filename and line, whereas Java log records have class and method.
          * So, encode filename and line, if present, into the message.
          */
@@ -48,7 +51,8 @@ public class LogProxy {
         else
         {
             StringBuilder sb = new StringBuilder();
-            if (filename != null) {
+            if (filename != null)
+            {
                 sb.append(filename);
             }
             if (line != 0)
@@ -86,7 +90,8 @@ public class LogProxy {
     private static LogProxy instance;
     static void register()
     {
-        if (instance == null) {
+        if (instance == null)
+        {
             instance = new LogProxy();
         }
     }
@@ -97,9 +102,11 @@ public class LogProxy {
     private static LoggingSeverity getEffectiveLoggingSeverity(java.util.logging.Logger logger)
     {
         LoggingSeverity ret = LoggingSeverity.LS_NONE;
-        for (LoggingSeverity l : LoggingSeverity.values()) {
+        for (LoggingSeverity l : LoggingSeverity.values())
+        {
             if (logger.isLoggable(l.level) &&
-                    l.level.intValue() < ret.level.intValue()) {
+                    l.level.intValue() < ret.level.intValue())
+            {
                 ret = l;
             }
         }
@@ -107,7 +114,8 @@ public class LogProxy {
     }
 
     @ExposeToNative
-    public enum LoggingSeverity {
+    public enum LoggingSeverity
+    {
         @CalledByNative
         LS_VERBOSE(Level.FINE),
         @CalledByNative
@@ -121,15 +129,18 @@ public class LogProxy {
 
         public final Level level;
 
-        LoggingSeverity(Level level) {
+        LoggingSeverity(Level level)
+        {
             this.level = level;
         }
 
-        public static LoggingSeverity fromLevel(Level level) {
+        public static LoggingSeverity fromLevel(Level level)
+        {
             LoggingSeverity ret = LS_NONE;
             for (LoggingSeverity l : LoggingSeverity.values()) {
                 if (l.level.intValue() >= level.intValue() &&
-                        l.level.intValue() < ret.level.intValue()) {
+                        l.level.intValue() < ret.level.intValue())
+                {
                     ret = l;
                 }
             }

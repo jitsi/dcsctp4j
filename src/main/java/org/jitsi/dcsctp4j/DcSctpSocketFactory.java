@@ -25,12 +25,15 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @ExposeToNative
-public class DcSctpSocketFactory {
+public class DcSctpSocketFactory
+{
     private final long ptr;
 
-    public DcSctpSocketFactory() {
+    public DcSctpSocketFactory()
+    {
         // Force load of DcSctp4j
-        if (DcSctp4j.CLEANER == null) {
+        if (DcSctp4j.CLEANER == null)
+        {
             throw new IllegalStateException();
         }
         ptr = construct();
@@ -60,7 +63,8 @@ public class DcSctpSocketFactory {
             @NotNull DcSctpOptions options);
 
     @ExposeToNative
-    static private class NativeSctpSocket implements DcSctpSocketInterface {
+    static private class NativeSctpSocket implements DcSctpSocketInterface
+    {
         private final long ptr;
         NativeSctpSocket(long ptr)
         {
@@ -70,7 +74,8 @@ public class DcSctpSocketFactory {
         @Override
         public synchronized void receivePacket(@NotNull byte[] data, int offset, int length)
         {
-            if (offset + length > data.length) {
+            if (offset + length > data.length)
+            {
                 throw new IllegalArgumentException("Array length " + data.length +
                         " too short for offset " + offset + " length " + length);
             }
@@ -88,21 +93,24 @@ public class DcSctpSocketFactory {
         private native void handleTimeout_(long ptr, long timeoutId);
 
         @Override
-        public synchronized void connect() {
+        public synchronized void connect()
+        {
             connect_(ptr);
         }
 
         private native void connect_(long ptr);
 
         @Override
-        public synchronized void shutdown() {
+        public synchronized void shutdown()
+        {
             shutdown_(ptr);
         }
 
         private native void shutdown_(long ptr);
 
         @Override
-        public synchronized void close() {
+        public synchronized void close()
+        {
             close_(ptr);
         }
 
@@ -110,7 +118,8 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public synchronized SocketState state() {
+        public synchronized SocketState state()
+        {
             return state_(ptr);
         }
 
@@ -118,21 +127,24 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public synchronized DcSctpOptions options() {
+        public synchronized DcSctpOptions options()
+        {
             return options_(ptr);
         }
 
         private native DcSctpOptions options_(long ptr);
 
         @Override
-        public synchronized void setStreamPriority(short streamId, short streamPriority) {
+        public synchronized void setStreamPriority(short streamId, short streamPriority)
+        {
             setStreamPriority_(ptr, streamId, streamPriority);
         }
 
         private native void setStreamPriority_(long ptr, short streamId, short streamPriority);
 
         @Override
-        public synchronized short getStreamPriority(short streamId) {
+        public synchronized short getStreamPriority(short streamId)
+        {
             return getStreamPriority_(ptr, streamId);
         }
 
@@ -140,7 +152,8 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public synchronized SendStatus send(@NotNull DcSctpMessage message, @NotNull SendOptions options) {
+        public synchronized SendStatus send(@NotNull DcSctpMessage message, @NotNull SendOptions options)
+        {
             /* This is expected to be one of the most common methods, so unwrap the java objects to minimize the JNI
              * overhead */
             int nativeStatus = send_(ptr,
@@ -149,11 +162,15 @@ public class DcSctpSocketFactory {
             return SendStatus.fromNativeStatus(nativeStatus);
         }
 
-        private native int send_(long ptr, byte[] payload, int ppid, short streamID, boolean isUnordered, Long lifetime, Long maxRetransmissions, long lifecycleId);
+        private native int send_(long ptr,
+                                 byte[] payload, int ppid, short streamID,
+                                 boolean isUnordered, Long lifetime, Long maxRetransmissions, long lifecycleId);
 
         @NotNull
         @Override
-        public synchronized List<SendStatus> sendMany(@NotNull List<DcSctpMessage> messages, @NotNull SendOptions options) {
+        public synchronized List<SendStatus> sendMany(@NotNull List<DcSctpMessage> messages,
+                                                      @NotNull SendOptions options)
+        {
             int[] nativeStatuses = sendMany_(ptr, messages.toArray(new DcSctpMessage[0]), options);
             return Arrays.stream(nativeStatuses).mapToObj(SendStatus::fromNativeStatus).collect(Collectors.toList());
         }
@@ -173,28 +190,32 @@ public class DcSctpSocketFactory {
 
         @NotNull
         @Override
-        public synchronized ResetStreamsStatus resetStreams(@NotNull List<Short> outgoingStreams) {
+        public synchronized ResetStreamsStatus resetStreams(@NotNull List<Short> outgoingStreams)
+        {
             return resetStreams_(ptr, unboxList(outgoingStreams));
         }
 
         private native ResetStreamsStatus resetStreams_(long ptr, short[] outgoingStreams);
 
         @Override
-        public synchronized long bufferedAmount(short streamId) {
+        public synchronized long bufferedAmount(short streamId)
+        {
             return bufferedAmount_(ptr, streamId);
         }
 
         private native long bufferedAmount_(long ptr, short streamId);
 
         @Override
-        public synchronized long bufferedAmountLowThreshold(short streamId) {
+        public synchronized long bufferedAmountLowThreshold(short streamId)
+        {
             return bufferedAmountLowThreshold_(ptr, streamId);
         }
 
         private native long bufferedAmountLowThreshold_(long ptr, short streamId);
 
         @Override
-        public synchronized void setBufferedAmountLowThreshold(short streamId, long bytes) {
+        public synchronized void setBufferedAmountLowThreshold(short streamId, long bytes)
+        {
             setBufferedAmountLowThreshold_(ptr, streamId, bytes);
         }
 
@@ -202,7 +223,8 @@ public class DcSctpSocketFactory {
 
         @Nullable
         @Override
-        public synchronized Metrics getMetrics() {
+        public synchronized Metrics getMetrics()
+        {
             return getMetrics_(ptr);
         }
 

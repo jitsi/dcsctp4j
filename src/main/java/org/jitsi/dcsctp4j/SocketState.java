@@ -20,7 +20,8 @@ import smjni.jnigen.ExposeToNative;
 
 /** The socket/association state */
 @ExposeToNative
-public enum SocketState {
+public enum SocketState
+{
     /** The socket is closed. */
     @CalledByNative
     kClosed,

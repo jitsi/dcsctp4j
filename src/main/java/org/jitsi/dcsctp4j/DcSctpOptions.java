@@ -20,7 +20,8 @@ import smjni.jnigen.CalledByNative;
 import smjni.jnigen.ExposeToNative;
 
 @ExposeToNative
-public class DcSctpOptions {
+public class DcSctpOptions
+{
     @CalledByNative
     private final long ptr;
 
