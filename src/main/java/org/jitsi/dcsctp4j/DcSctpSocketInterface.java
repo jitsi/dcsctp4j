@@ -23,7 +23,7 @@ import java.util.List;
 public interface DcSctpSocketInterface
 {
     /** To be called when an incoming SCTP packet is to be processed. */
-    void receivePacket(@NotNull byte[] data, int offset, int length);
+    void receivePacket(byte @NotNull [] data, int offset, int length);
 
     /** To be called when a timeout has expired. The timeoutId is provided
      when the timeout was initiated. */
@@ -94,7 +94,7 @@ public interface DcSctpSocketInterface
      * This has identical semantics to Send, except that it may coalesce many
      * messages into a single SCTP packet if they would fit.
      */
-    @NotNull List<SendStatus> sendMany(@NotNull List<DcSctpMessage> messages, @NotNull SendOptions options);
+    @NotNull List<SendStatus> sendMany(@NotNull List<@NotNull DcSctpMessage> messages, @NotNull SendOptions options);
 
     /**
      * Resetting streams is an asynchronous operation and the results will
@@ -113,7 +113,7 @@ public interface DcSctpSocketInterface
      * supports stream resetting. Calling this method on e.g. a closed association
      * or streams that don't support resetting will not perform any operation.
      */
-    @NotNull ResetStreamsStatus resetStreams(@NotNull List<Short> outgoingStreams);
+    @NotNull ResetStreamsStatus resetStreams(@NotNull List<@NotNull Short> outgoingStreams);
 
     /**
      * Returns the number of bytes of data currently queued to be sent on a given
