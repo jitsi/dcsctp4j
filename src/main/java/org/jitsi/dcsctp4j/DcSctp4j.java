@@ -42,4 +42,7 @@ public class DcSctp4j
             logger.error("Error loading native library: ", e);
         }
     }
+
+    /** Force the class to be loaded, and thus initialized. */
+    static void init() {}
 }

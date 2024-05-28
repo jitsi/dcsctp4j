@@ -27,15 +27,15 @@ import java.util.stream.Collectors;
 @ExposeToNative
 public class DcSctpSocketFactory
 {
+    static
+    {
+        DcSctp4j.init();
+    }
+
     private final long ptr;
 
     public DcSctpSocketFactory()
     {
-        // Force load of DcSctp4j
-        if (DcSctp4j.CLEANER == null)
-        {
-            throw new IllegalStateException();
-        }
         ptr = construct();
         long ptrCopy = ptr;
         DcSctp4j.CLEANER.register(this, () -> destruct(ptrCopy));
@@ -72,7 +72,7 @@ public class DcSctpSocketFactory
         }
 
         @Override
-        public synchronized void receivePacket(@NotNull byte[] data, int offset, int length)
+        public synchronized void receivePacket(byte @NotNull [] data, int offset, int length)
         {
             if (offset + length > data.length)
             {
@@ -168,7 +168,7 @@ public class DcSctpSocketFactory
 
         @NotNull
         @Override
-        public synchronized List<SendStatus> sendMany(@NotNull List<DcSctpMessage> messages,
+        public synchronized List<SendStatus> sendMany(@NotNull List<@NotNull DcSctpMessage> messages,
                                                       @NotNull SendOptions options)
         {
             int[] nativeStatuses = sendMany_(ptr, messages.toArray(new DcSctpMessage[0]), options);

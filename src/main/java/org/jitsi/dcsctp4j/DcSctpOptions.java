@@ -22,6 +22,11 @@ import smjni.jnigen.ExposeToNative;
 @ExposeToNative
 public class DcSctpOptions
 {
+    static
+    {
+        DcSctp4j.init();
+    }
+
     @CalledByNative
     private final long ptr;
 

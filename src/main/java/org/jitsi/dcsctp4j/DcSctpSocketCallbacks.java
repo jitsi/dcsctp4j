@@ -39,11 +39,11 @@ public interface DcSctpSocketCallbacks
      * Note that it's NOT ALLOWED to call into this library from within this
      * callback.
      */
-    SendPacketStatus sendPacketWithStatus(@NotNull byte[] data);
+    SendPacketStatus sendPacketWithStatus(byte @NotNull [] data);
 
     /** Version of sendPacketWithStatus optimizing JNI */
     @CalledByNative
-    default int sendPacketWithStatus_(@NotNull byte[] data)
+    default int sendPacketWithStatus_(byte @NotNull [] data)
     {
         return sendPacketWithStatus(data).nativeStatus;
     }
@@ -108,7 +108,7 @@ public interface DcSctpSocketCallbacks
 
     /** Version of OnMessageReceived optimizing JNI */
     @CalledByNative
-    default void OnMessageReceived_(@NotNull byte[] payload, int ppid, short streamID)
+    default void OnMessageReceived_(byte @NotNull [] payload, int ppid, short streamID)
     {
         DcSctpMessage message = new DcSctpMessage(streamID, ppid, payload);
         OnMessageReceived(message);
@@ -170,7 +170,7 @@ public interface DcSctpSocketCallbacks
      */
     @CalledByNative
     void OnStreamsResetFailed(
-            @NotNull short[] outgoing_streams,
+            short @NotNull [] outgoing_streams,
             @NotNull String reason);
 
     /**
@@ -180,7 +180,7 @@ public interface DcSctpSocketCallbacks
      */
     @CalledByNative
     void OnStreamsResetPerformed(
-            @NotNull short[] outgoing_streams);
+            short @NotNull [] outgoing_streams);
 
     /**
      * When a peer has reset some of its outgoing streams, this will be called. An
@@ -190,7 +190,7 @@ public interface DcSctpSocketCallbacks
      */
     @CalledByNative
     void OnIncomingStreamsReset(
-            @NotNull short[] incoming_streams);
+            short @NotNull [] incoming_streams);
 
     /**
      * Will be called when the amount of data buffered to be sent falls to or
