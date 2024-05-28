@@ -23,7 +23,7 @@ import java.util.logging.Level;
 import java.util.logging.LogRecord;
 
 @ExposeToNative
-public class LogProxy
+class LogProxy
 {
     private final long nativePtr;
     private final java.util.logging.Logger loggerDelegate =
