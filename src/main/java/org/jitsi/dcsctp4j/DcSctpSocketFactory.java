@@ -27,15 +27,15 @@ import java.util.stream.Collectors;
 @ExposeToNative
 public class DcSctpSocketFactory
 {
+    static
+    {
+        DcSctp4j.init();
+    }
+
     private final long ptr;
 
     public DcSctpSocketFactory()
     {
-        // Force load of DcSctp4j
-        if (DcSctp4j.CLEANER == null)
-        {
-            throw new IllegalStateException();
-        }
         ptr = construct();
         long ptrCopy = ptr;
         DcSctp4j.CLEANER.register(this, () -> destruct(ptrCopy));
