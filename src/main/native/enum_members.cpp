@@ -19,13 +19,6 @@
 using namespace smjni;
 using namespace dcsctp;
 
-template <typename E> global_java_ref<E> enum_field(JNIEnv* env, java_class<E> clazz, const char* name)
-{
-    java_static_field<E, E> field(env, clazz, name);
-    return field.get(env, clazz);
-}
-
-
 DelayPrecision_members::DelayPrecision_members(JNIEnv * env) :
     m_kLow(java_classes::get<DcSctpSocketCallbacks_DelayPrecision_class>().get_kLow(env)),
     m_kHigh(java_classes::get<DcSctpSocketCallbacks_DelayPrecision_class>().get_kHigh(env))

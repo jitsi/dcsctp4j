@@ -70,7 +70,9 @@ class WrappedSocketCallbacks: public dcsctp::DcSctpSocketCallbacks {
     
   private:
     DcSctpSocketCallbacks_class socketCallbacksClass;
-    smjni::global_java_ref<jDcSctpSocketCallbacks> socketCallbacks;
+    smjni::weak_java_ref<jDcSctpSocketCallbacks> wSocketCallbacks;
+
+    smjni::local_java_ref<jDcSctpSocketCallbacks> getObj(JNIEnv* env);
 };
 
 class WrappedPacketObserver: public dcsctp::PacketObserver {
@@ -82,7 +84,9 @@ class WrappedPacketObserver: public dcsctp::PacketObserver {
 
   private:
     PacketObserver_class packetObserverClass;
-    smjni::global_java_ref<jPacketObserver> javaObserver;
+    smjni::weak_java_ref<jPacketObserver> wJavaObserver;
+
+    smjni::local_java_ref<jPacketObserver> getObj(JNIEnv* env);
 };
 
 class WrappedTimeout: public dcsctp::Timeout {
