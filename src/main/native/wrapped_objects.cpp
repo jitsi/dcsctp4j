@@ -109,7 +109,7 @@ local_java_ref<jDcSctpSocketCallbacks> WrappedSocketCallbacks::getObj(JNIEnv *en
     local_java_ref<jDcSctpSocketCallbacks> obj(wSocketCallbacks);
 
     if (!obj) {
-        auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Weak PacketObserver reference garbage collected"));
+        auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Weak DcSctpSocketCallbacks reference garbage collected"));
         throw java_exception(ex);
     }
     return obj;
