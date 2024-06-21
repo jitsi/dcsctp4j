@@ -33,6 +33,10 @@ public interface Timeout
      *
      * `Start` and `Stop` will always be called in pairs. In other words will
      * ´Start` never be called twice, without a call to `Stop` in between.
+     *
+     * Note(Java): the SctpSocket holds a JNI global reference to a Timeout object.  To avoid
+     * reference cycles, the Timeout subclass must only have weak references to objects that reference
+     * the SctpSocket.
      */
     @CalledByNative
     void start(long duration, long timeoutId);
