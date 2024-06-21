@@ -29,6 +29,13 @@ NativeSctpSocket::NativeSctpSocket(jDcSctpSocketCallbacks jCallbacks) :
 {
 }
 
+void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::destruct(JNIEnv *env, jclass, jlong ptr)
+{
+NATIVE_PROLOG
+    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+    delete nativeSocket;
+NATIVE_EPILOG
+}
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::receivePacket_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray data, jint offset, jint length)
 {

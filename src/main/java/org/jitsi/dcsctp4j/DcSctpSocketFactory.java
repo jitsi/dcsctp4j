@@ -52,7 +52,7 @@ public class DcSctpSocketFactory
             @NotNull DcSctpOptions options)
     {
         long socketPtr = create_(ptr, logPrefix, callbacks, packetObserver, options);
-        return new NativeSctpSocket(socketPtr);
+        return new NativeSctpSocket(callbacks, packetObserver, socketPtr);
     }
 
     private native long create_(
@@ -65,11 +65,19 @@ public class DcSctpSocketFactory
     @ExposeToNative
     static private class NativeSctpSocket implements DcSctpSocketInterface
     {
+        @NotNull DcSctpSocketCallbacks callbacks;
+        @Nullable PacketObserver packetObserver;
+
         private final long ptr;
-        NativeSctpSocket(long ptr)
+        NativeSctpSocket(@NotNull DcSctpSocketCallbacks callbacks, @Nullable PacketObserver packetObserver, long ptr)
         {
+            this.callbacks = callbacks;
+            this.packetObserver = packetObserver;
             this.ptr = ptr;
+            DcSctp4j.CLEANER.register(this, () -> destruct(ptr));
         }
+
+        private static native void destruct(long ptr);
 
         @Override
         public synchronized void receivePacket(byte @NotNull [] data, int offset, int length)
