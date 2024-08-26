@@ -36,6 +36,8 @@ $ git submodule update --init
 ```
 $ mvn compile
 ```
+* Check out the [Google DepotTools](https://www.chromium.org/developers/how-tos/install-depot-tools/)
+
 * Check out WebRTC and build the libraries (adjusting the paths to DepotTools and WebRTC as desired)
 ```
 $ resources/ubuntu-build-all.sh ~/DepotTools ~/WebRTC
@@ -56,6 +58,8 @@ $ git submodule update --init
 ```
 $ mvn compile
 ```
+* Check out the [Google DepotTools](https://www.chromium.org/developers/how-tos/install-depot-tools/)
+
 * Check out WebRTC and build the libraries (adjusting the paths to DepotTools and WebRTC as desired)
 ```
 $ resources/macos-build-all.sh ~/DepotTools ~/WebRTC
