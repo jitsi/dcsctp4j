@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PROJECT_DIR="$(realpath "$(dirname "$0")/../")"
 JAVA_VERSION=11
-ARCHS=(x86-64 arm64)
+ARCHS=(x86-64 arm64 ppc64le)
 
 if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <DEPOT_TOOLS_DIR> <WEBRTC_DIR>"

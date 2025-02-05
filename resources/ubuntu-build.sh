@@ -27,6 +27,12 @@ case $ARCH in
         DEBARCH=arm64
         GN_ARCH=arm64
         ;;
+    "ppc64le")
+        JNAARCH=ppc64le
+        DEBARCH=ppc64le
+        GN_ARCH=ppc64le
+        GCC_ARCH=powerpc64le
+        ;;
     *)
 	echo "ERROR: Unsupported arch $ARCH"
 	exit 1
@@ -43,6 +49,9 @@ if test \! -d $WEBRTC_DIR/.git -a -r $WEBRTC_DIR/.gclient -a -d $WEBRTC_DIR/src/
     # They specified the WebRTC gclient directory, not the src checkout subdirectory
     WEBRTC_DIR=$WEBRTC_DIR/src
 fi
+if test \! -d $WEBRTC_DIR/.git -a "${ARCH}" = "ppc64le" -a -d $WEBRTC_DIR/src/.git; then
+    WEBRTC_DIR=$WEBRTC_DIR/src
+fi
 
 WEBRTC_BUILD=out/linux-$GN_ARCH
 WEBRTC_OBJ=$WEBRTC_DIR/$WEBRTC_BUILD
@@ -51,18 +60,30 @@ PATH=$PATH:$DEPOT_TOOLS_DIR
 
 startdir=$PWD
 
-cd $WEBRTC_DIR
-./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
-rm -rf $WEBRTC_BUILD
-gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=false symbol_level=2"
-ninja -C $WEBRTC_BUILD dcsctp
+if test "${ARCH}" != "ppc64le"; then
+    cd $WEBRTC_DIR
+    ./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
+    rm -rf $WEBRTC_BUILD
+    gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=false symbol_level=2"
+    ninja -C $WEBRTC_BUILD dcsctp
 
-cd $startdir
+    cd $startdir
+fi
 
 NCPU=$(nproc)
 if [ -n "$NCPU" -a "$NCPU" -gt 1 ]
 then
     MAKE_ARGS="-j $NCPU"
+fi
+
+if test "${ARCH}" = "ppc64le"; then
+    cd $WEBRTC_DIR/net/dcsctp
+    cp "$startdir/resources/Makefile" .
+    make clean
+    make $MAKE_ARGS CXX=${GCC_ARCH}-linux-gnu-g++ AR=${GCC_ARCH}-linux-gnu-ar
+    mkdir -p $WEBRTC_OBJ
+    ln -sf ../../net/dcsctp $WEBRTC_OBJ/obj
+    cd $startdir
 fi
 
 if [ -n "$MAKE_ARGS" ]

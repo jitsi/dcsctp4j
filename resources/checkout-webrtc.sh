@@ -18,6 +18,9 @@ REV=$3
 
 STARTDIR=$PWD
 
+if test "$(uname -m)" = "ppc64le"; then
+    exit 0
+fi
 if test -d "$DEPOT_TOOLS_DIR"; then
     if test \! -d "$DEPOT_TOOLS_DIR"/.git; then
         echo "ERROR: $DEPOT_TOOLS_DIR exists, but does not seem to be a Git repository"
