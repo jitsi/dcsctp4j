@@ -58,8 +58,8 @@ PATH=$PATH:$DEPOT_TOOLS_DIR
 startdir=$PWD
 
 cd $WEBRTC_DIR
-./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
 rm -rf $WEBRTC_BUILD
+./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
 gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=false symbol_level=2"
 ninja -C $WEBRTC_BUILD dcsctp
 
