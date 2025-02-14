@@ -39,6 +39,12 @@ if [ $DEBARCH != $NATIVEDEBARCH -a -f "cmake/$DEBARCH-linux-gnu.cmake" ]; then
     TOOLCHAIN_FILE="cmake/$DEBARCH-linux-gnu.cmake"
 fi
 
+NCPU=$(nproc)
+if [ -n "$NCPU" -a "$NCPU" -gt 1 ]
+then
+    MAKE_ARGS="-j $NCPU"
+fi
+
 if test \! -d $WEBRTC_DIR/.git -a -r $WEBRTC_DIR/.gclient -a -d $WEBRTC_DIR/src/.git; then
     # They specified the WebRTC gclient directory, not the src checkout subdirectory
     WEBRTC_DIR=$WEBRTC_DIR/src
@@ -58,12 +64,6 @@ gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_
 ninja -C $WEBRTC_BUILD dcsctp
 
 cd $startdir
-
-NCPU=$(nproc)
-if [ -n "$NCPU" -a "$NCPU" -gt 1 ]
-then
-    MAKE_ARGS="-j $NCPU"
-fi
 
 if [ -n "$MAKE_ARGS" ]
 then
