@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-if [ "$#" -lt 4 -o "$#" -gt 6 ]; then
-    echo "Usage: $0 <JAVA_HOME> <DEPOT_TOOLS_DIR> <WEBRTC_DIR> <ARCH> [USE_MAKEFILE] [VERBOSE]"
+if [ "$#" -lt 4 -o "$#" -gt 7 ]; then
+    echo "Usage: $0 <JAVA_HOME> <DEPOT_TOOLS_DIR> <WEBRTC_DIR> <ARCH> [USE_MAKEFILE] [VERBOSE] [DEBUG]"
     echo "  JAVA_HOME: Path to Java installation"
     echo "  DEPOT_TOOLS_DIR: Directory containing Google depot tools"
     echo "  WEBRTC_DIR: Directory containing WebRTC source"
     echo "  ARCH: Architecture to build for (x86_64, arm64, or ppc64le)"
     echo "  USE_MAKEFILE: \"BUILD_DCSCTP_WITH_MAKEFILE\" => Use non-gn/ninja arch Makefile"
     echo "  VERBOSE: \"true\" => Print compiler invocations"
+    echo "  DEBUG: \"true\" => Build every object with optimization level -O0"
     exit 1
 fi
 
@@ -19,6 +20,7 @@ WEBRTC_DIR=$3
 ARCH=$4
 USE_MAKEFILE=$5
 VERBOSE=$6
+DEBUG=$7
 
 case $ARCH in
     "x86-64"|"x86_64"|"amd64"|"x64")
@@ -49,6 +51,16 @@ if test "$VERBOSE" = "true"; then
     VERBOSE_CMAKE=VERBOSE=1
 fi
 
+if test "$DEBUG" = "true"; then
+    DEBUG_GN=true
+    DEBUG_MAKE=DEBUG=-O0
+    DEBUG_CMAKE=-DCMAKE_CXX_FLAGS=-O0
+    DEBUG_CMAKE_BUILD_TYPE=Debug
+else
+    DEBUG_GN=false
+    DEBUG_CMAKE_BUILD_TYPE=RelWithDebInfo
+fi
+
 NATIVEDEBARCH=$(dpkg --print-architecture)
 
 if [ $DEBARCH != $NATIVEDEBARCH -a -f "cmake/$DEBARCH-linux-gnu.cmake" ]; then
@@ -77,13 +89,14 @@ cd $WEBRTC_DIR
 rm -rf $WEBRTC_BUILD
 if test "$USE_MAKEFILE" != "BUILD_DCSCTP_WITH_MAKEFILE"; then
     ./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
-    gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=false symbol_level=2"
+    gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2"
     ninja $VERBOSE_NINJA -C $WEBRTC_BUILD dcsctp
 else
     make $MAKE_ARGS -C $startdir/resources \
         VPATH="$WEBRTC_DIR" \
         OBJDIR="$WEBRTC_OBJ/obj" \
         $VERBOSE_MAKE \
+        $DEBUG_MAKE \
         CXX=${GNU_ARCH}-linux-gnu-g++ \
         AR=${GNU_ARCH}-linux-gnu-ar
 fi
@@ -102,6 +115,7 @@ cmake -B cmake-build-linux-"$DEBARCH" \
     -DWEBRTC_DIR="$WEBRTC_DIR" \
     -DWEBRTC_OBJ="$WEBRTC_OBJ" \
     -DCMAKE_TOOLCHAIN_FILE:PATH="$TOOLCHAIN_FILE" \
-    -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    $DEBUG_CMAKE \
+    -DCMAKE_BUILD_TYPE=$DEBUG_CMAKE_BUILD_TYPE
 
 cmake --build cmake-build-linux-"$DEBARCH" --target install $CMAKE_BUILD_ARGS $VERBOSE_CMAKE
