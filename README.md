@@ -25,7 +25,7 @@ Prerequisites:
 - Maven
 - CMake
 - Git
-- APT packages `build-essential`, `g++-aarch64-linux-gnu`, `g++-powerpc64le-linux-gnu` and their dependencies
+- APT packages `build-essentials`, `g++-aarch64-linux-gnu` and their dependencies
 
 * Clone the project
 * Update the SimpleJNI subproject with

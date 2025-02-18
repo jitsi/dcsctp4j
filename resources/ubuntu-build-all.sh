@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 PROJECT_DIR="$(realpath "$(dirname "$0")/../")"
 JAVA_VERSION=11
-ARCHS=(x86-64 arm64 ppc64le)
+ARCHS=(x86-64 arm64)
 
 if [ "$#" -ne 2 ]; then
     echo "Usage: $0 <DEPOT_TOOLS_DIR> <WEBRTC_DIR>"
@@ -39,8 +39,5 @@ mvn compile # Build SimpleJNI jnigen headers
 "$PROJECT_DIR/resources/checkout-webrtc.sh" "$DEPOT_TOOLS_DIR" "$WEBRTC_DIR" "$WEBRTC_REVISION"
 
 for ARCH in "${ARCHS[@]}"; do
-    if test "$ARCH" = "ppc64le"; then
-        MAKEFILE_ARGUMENT=BUILD_DCSCTP_WITH_MAKEFILE
-    fi
-    "$PROJECT_DIR/resources/ubuntu-build.sh" "$JAVA_HOME" "$DEPOT_TOOLS_DIR" "$WEBRTC_DIR" "$ARCH" "$MAKEFILE_ARGUMENT"
+    "$PROJECT_DIR/resources/ubuntu-build.sh" "$JAVA_HOME" "$DEPOT_TOOLS_DIR" "$WEBRTC_DIR" "$ARCH"
 done
