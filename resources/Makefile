@@ -32,10 +32,10 @@ CXXFLAGS += -fstack-protector -funwind-tables -fPIC -pthread
 CXXFLAGS += -fmerge-all-constants -ffp-contract=off -m64
 CXXFLAGS += -Wno-builtin-macro-redefined -D__DATE__= -D__TIME__=
 CXXFLAGS += -D__TIMESTAMP__= -no-canonical-prefixes
-CXXFLAGS += -ftrivial-auto-var-init=pattern $(DEBUG) -fdata-sections
+CXXFLAGS += $(DEBUG) -fdata-sections
 CXXFLAGS += -ffunction-sections -fno-math-errno -fno-omit-frame-pointer
 CXXFLAGS += -gdwarf-4 -g2 -ggnu-pubnames -fvisibility=hidden -Wno-shadow
-CXXFLAGS += -Wctad-maybe-unsupported -Wundef -std=c++17 -Wno-trigraphs
+CXXFLAGS += -Wundef -std=c++17 -Wno-trigraphs
 CXXFLAGS += -fno-exceptions -fno-rtti
 CXXFLAGS += -fvisibility-inlines-hidden -Wnon-virtual-dtor -Woverloaded-virtual
 # Silence GCC 12 warnings.
