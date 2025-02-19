@@ -89,4 +89,4 @@ $(OBJDIR)/libdcsctp.a: $(OBJECTS)
 	$(SILENT)$(AR) $(ARFLAGS) $@ $^
 $(OBJECTS): | $(OBJDIRS)
 $(OBJDIRS):
-	@mkdir -p $(OBJDIRS)
+	@mkdir -p $@
