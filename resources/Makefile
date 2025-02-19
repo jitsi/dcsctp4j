@@ -49,12 +49,12 @@ CXXFLAGS += -I$(S)/third_party/crc32c/src/include
 # Assume all non-test .cc files under net/dcsctp are needed by libdcsctp4j.so.
 # "gn/ninja" includes 37 extra objects but they are not needed by
 # libdcsctp4j.so.
-TESTS = $(wildcard $(S)/net/dcsctp/*/*_test*.cc $(S)/net/dcsctp/*/*/*_test*.cc)
-SOURCES = $(wildcard $(S)/net/dcsctp/*/*.cc $(S)/net/dcsctp/*/*/*.cc)
+TESTS = $(shell find $(S)/net/dcsctp -name "*_test*.cc")
+SOURCES = $(shell find $(S)/net/dcsctp -name "*.cc")
 OBJECTS = $(patsubst %.cc,%.o,$(filter-out $(TESTS),$(SOURCES)))
 # Assume all source files are in subdirectories and subsubdirectories of
 # net/dcsctp.
-DIRS = $(wildcard $(S)/*/ $(S)/*/*/ $(S)/*/*/*/ $(S)/*/*/*/*/ $(S)/*/*/*/*/*/)
+DIRS = $(shell find $(S) -maxdepth 5 -type d -print)
 # Add other objects required to fix libdcsctp4j.so errors; first compilation
 # errors, then undefined symbol errors reported at runtime by the dynamic
 # linker.
