@@ -61,6 +61,10 @@ public interface DcSctpSocketCallbacks
      *
      * Note that it's NOT ALLOWED to call into this library from within this
      * callback.
+     *
+     * Note(Java): the SctpSocket will hold a JNI global reference to the returned Timeout object.  To avoid
+     * reference cycles, the timeout subclass must only have weak references to objects that reference
+     * the SctpSocket.
      */
     @CalledByNative
     Timeout createTimeout(@NotNull DelayPrecision precision);
