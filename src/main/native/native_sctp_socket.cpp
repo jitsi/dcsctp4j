@@ -48,11 +48,31 @@ NATIVE_PROLOG
     }
     /* It's safe to expose the java array data directly for the duration of this call,
        because dcsctp will make a copy of anything it needs. */
-    auto dataView = rtc::ArrayView<const uint8_t>(reinterpret_cast<const uint8_t*>(aData.data()) + offset, length);
+    auto dataView = webrtc::ArrayView<const uint8_t>(reinterpret_cast<const uint8_t*>(aData.data()) + offset, length);
     nativeSocket->socket->ReceivePacket(dataView);
 NATIVE_EPILOG
 }
 
+jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::messagesReady_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
+{
+NATIVE_PROLOG
+    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+    return nativeSocket->socket->MessagesReady();
+NATIVE_EPILOG_Z
+}
+
+jDcSctpMessage JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getNextMessage_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
+{
+NATIVE_PROLOG
+    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+    auto msg = nativeSocket->socket->GetNextMessage();
+    if (!msg) {
+        return nullptr;
+    }
+
+    return convertDcSctpMessage(env, *msg).release();
+NATIVE_EPILOG_Z
+}
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::handleTimeout_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jlong timeoutId)
 {
@@ -256,6 +276,20 @@ DcSctpMessage convertDcSctpMessage(JNIEnv* env, jDcSctpMessage jmessage)
 
     auto message = DcSctpMessage(StreamID(streamID), PPID(ppid), vPayload);
     return message;
+}
+
+local_java_ref<jDcSctpMessage> convertDcSctpMessage(JNIEnv* env, const DcSctpMessage& message)
+{
+    auto payload = message.payload();
+    auto jPayload = java_array_create<jbyte>(env, payload.size());
+    auto aPayload = java_array_access(env, jPayload);
+    copy(payload.cbegin(), payload.cend(), aPayload.begin());
+    aPayload.commit();
+
+    auto messageClass = java_classes::get<DcSctpMessage_class>();
+    auto jmessage = messageClass.ctor(env, *message.stream_id(), *message.ppid(), jPayload);
+
+    return jmessage;
 }
 
 SendOptions convertSendOptions(JNIEnv* env, jSendOptions jOptions)

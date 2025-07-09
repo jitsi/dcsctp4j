@@ -38,7 +38,7 @@ local_java_ref<jPacketObserver> WrappedPacketObserver::getObj(JNIEnv *env)
     return obj;
 }
 
-void WrappedPacketObserver::OnSentPacket(TimeMs now, rtc::ArrayView<const uint8_t> payload)
+void WrappedPacketObserver::OnSentPacket(TimeMs now, webrtc::ArrayView<const uint8_t> payload)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -52,7 +52,7 @@ void WrappedPacketObserver::OnSentPacket(TimeMs now, rtc::ArrayView<const uint8_
     packetObserverClass.OnSentPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
 }
 
-void WrappedPacketObserver::OnReceivedPacket(TimeMs now, rtc::ArrayView<const uint8_t> payload)
+void WrappedPacketObserver::OnReceivedPacket(TimeMs now, webrtc::ArrayView<const uint8_t> payload)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -116,13 +116,13 @@ local_java_ref<jDcSctpSocketCallbacks> WrappedSocketCallbacks::getObj(JNIEnv *en
 }
 
 
-void WrappedSocketCallbacks::SendPacket(rtc::ArrayView<const uint8_t> data)
+void WrappedSocketCallbacks::SendPacket(webrtc::ArrayView<const uint8_t> data)
 {
     SendPacketWithStatus(data);
 }
 
 SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
-        rtc::ArrayView<const uint8_t> data)
+        webrtc::ArrayView<const uint8_t> data)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -191,6 +191,15 @@ void WrappedSocketCallbacks::OnMessageReceived(DcSctpMessage message)
     socketCallbacksClass.OnMessageReceived_(env, socketCallbacks, jPayload.c_ptr(), *message.ppid(), *message.stream_id());
 }
 
+void WrappedSocketCallbacks::OnMessageReady()
+{
+    JNIEnv* env = jni_provider::get_jni();
+
+    auto socketCallbacks = getObj(env);
+
+    socketCallbacksClass.OnMessageReady(env, socketCallbacks);
+}
+
 void WrappedSocketCallbacks::OnError(ErrorKind error, absl::string_view message)
 {
     JNIEnv* env = jni_provider::get_jni();
@@ -241,7 +250,7 @@ void WrappedSocketCallbacks::OnConnectionRestarted()
 }
 
 void WrappedSocketCallbacks::OnStreamsResetFailed(
-        rtc::ArrayView<const StreamID> outgoing_streams,
+        webrtc::ArrayView<const StreamID> outgoing_streams,
         absl::string_view reason)
 {
     JNIEnv* env = jni_provider::get_jni();
@@ -259,7 +268,7 @@ void WrappedSocketCallbacks::OnStreamsResetFailed(
 }
 
 void WrappedSocketCallbacks::OnStreamsResetPerformed(
-        rtc::ArrayView<const StreamID> outgoing_streams)
+        webrtc::ArrayView<const StreamID> outgoing_streams)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -274,7 +283,7 @@ void WrappedSocketCallbacks::OnStreamsResetPerformed(
 }
 
 void WrappedSocketCallbacks::OnIncomingStreamsReset(
-        rtc::ArrayView<const StreamID> incoming_streams)
+        webrtc::ArrayView<const StreamID> incoming_streams)
 {
     JNIEnv* env = jni_provider::get_jni();
 

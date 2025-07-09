@@ -25,6 +25,24 @@ public interface DcSctpSocketInterface
     /** To be called when an incoming SCTP packet is to be processed. */
     void receivePacket(byte @NotNull [] data, int offset, int length);
 
+    /** Returns the number of received messages that can be retrieved by calling
+     * {@link #getNextMessage}.
+     *
+     * Only used when {@link DcSctpOptions#getEnableReceivePullMode()} is true (will
+     * always return zero if not enabled).
+     */
+    long messagesReady();
+
+    /**
+     * To be called after `DcSctpSocketCallbacks::OnMessagesReady` has triggered
+     * to retrieve the next message, if any.
+     *
+     * Only used when {@link DcSctpOptions#getEnableReceivePullMode()} is true (will
+     * always return empty if not enabled).
+     */
+    @Nullable
+    DcSctpMessage getNextMessage();
+
     /** To be called when a timeout has expired. The timeoutId is provided
      when the timeout was initiated. */
     void handleTimeout(long timeoutId);

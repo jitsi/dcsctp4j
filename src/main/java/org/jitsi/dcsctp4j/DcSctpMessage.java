@@ -27,6 +27,7 @@ import smjni.jnigen.ExposeToNative;
 @ExposeToNative
 public class DcSctpMessage
 {
+    @CalledByNative
     public DcSctpMessage(short stream_id, int ppid, @NotNull byte[] pay)
     {
         this.streamID = stream_id;

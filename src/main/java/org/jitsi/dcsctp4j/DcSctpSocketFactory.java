@@ -93,6 +93,22 @@ public class DcSctpSocketFactory
         private native void receivePacket_(long ptr, byte[] data, int offset, int length);
 
         @Override
+        public synchronized long messagesReady()
+        {
+            return messagesReady_(ptr);
+        }
+
+        private native long messagesReady_(long ptr);
+
+        @Override
+        public synchronized DcSctpMessage getNextMessage()
+        {
+            return getNextMessage_(ptr);
+        }
+
+        private native DcSctpMessage getNextMessage_(long ptr);
+
+        @Override
         public synchronized void handleTimeout(long timeoutId)
         {
             handleTimeout_(ptr, timeoutId);

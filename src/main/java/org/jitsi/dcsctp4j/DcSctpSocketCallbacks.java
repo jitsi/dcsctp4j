@@ -99,7 +99,8 @@ public interface DcSctpSocketCallbacks
 
     /**
      * Called when the library has received an SCTP message in full and delivers
-     * it to the upper layer.
+     * it to the upper layer given that {@link DcSctpOptions#getEnableReceivePullMode()}
+     * isn't enabled.
      *
      * It is allowed to call into this library from within this callback.
      */
@@ -113,6 +114,16 @@ public interface DcSctpSocketCallbacks
         DcSctpMessage message = new DcSctpMessage(streamID, ppid, payload);
         OnMessageReceived(message);
     }
+
+    /**
+     * Called when {@link DcSctpOptions#getEnableReceivePullMode()} is enabled and the
+     * library has one or more SCTP messages ready to be received with
+     * {@link DcSctpSocketInterface#getNextMessage}.
+     *
+     * It is allowed to call into this library from within this callback.
+     */
+    @CalledByNative
+    default void OnMessageReady() {}
 
     /**
      * Triggered when an non-fatal error is reported by either this library or

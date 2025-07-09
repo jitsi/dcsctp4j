@@ -89,7 +89,7 @@ cd $WEBRTC_DIR
 rm -rf $WEBRTC_BUILD
 if test "$USE_MAKEFILE" != "BUILD_DCSCTP_WITH_MAKEFILE"; then
     ./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
-    gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2"
+    gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2 use_lld=false"
     ninja $VERBOSE_NINJA -C $WEBRTC_BUILD dcsctp
 else
     make $MAKE_ARGS -C $startdir/resources \

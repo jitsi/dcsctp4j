@@ -54,5 +54,5 @@ else
     fetch --nohooks webrtc
 fi
 
-gclient sync -r $REV -D
+gclient sync -r $REV --with_branch_heads -D
 

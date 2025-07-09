@@ -20,7 +20,6 @@ import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.junit.jupiter.api.*;
 
-import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -45,11 +44,12 @@ public class DcSctp4jTest {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
         Logger logger = new LoggerImpl("testSocketCreate");
-        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null);
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null, false);
         DcSctpOptions options = new DcSctpOptions();
 
         wrapper.socket = factory.create("testSocketCreate", callbacks, null, options);
         assertNotNull(wrapper.socket);
+        assertFalse(callbacks.failed);
     }
 
     @Test @Disabled /* dcsctp is compiled with -fno-exceptions, so we can't throw through it. */
@@ -57,7 +57,7 @@ public class DcSctp4jTest {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
         Logger logger = new LoggerImpl("testException");
-        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null) {
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null, false) {
             @Override
             public Timeout createTimeout(@NotNull DelayPrecision precision) {
                 throw new IllegalStateException("I'm not happy!");
@@ -70,32 +70,47 @@ public class DcSctp4jTest {
                 "Expected exception to be successfully thrown through JNI"
                 );
         assertEquals("I'm not happy!", e.getMessage());
-
+        assertFalse(callbacks.failed);
     }
 
     @Test
     public void testSimpleConnection() {
+        testConnection(false);
+    }
+
+    @Test
+    public void testPullModeConnection() {
+        testConnection(true);
+    }
+
+    private void testConnection(boolean pullMode) {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
 
         SocketWrapper server = new SocketWrapper();
         SocketWrapper client = new SocketWrapper();
 
-        Logger clientLogger = new LoggerImpl(this.getClass().getName() + ".simpleConnectionClient");
-        clientLogger.addContext("name", "simpleConnectionClient");
+        String name = pullMode ? "pull" : "push";
+        String clientName = name + "ModeConnectionClient";
+        String serverName = name + "ModeConnectionServer";
 
-        Logger serverLogger = new LoggerImpl(this.getClass().getName() + ".simpleConnectionServer");
-        serverLogger.addContext("name", "simpleConnectionServer");
+        Logger clientLogger = new LoggerImpl(this.getClass().getName() + "." + clientName);
+        clientLogger.addContext("name", clientName);
+
+        Logger serverLogger = new LoggerImpl(this.getClass().getName() + "." + serverName);
+        serverLogger.addContext("name", serverName);
 
         TestCallbacks clientCallbacks =
-                new TestCallbacks(client, Clock.systemUTC(), clientLogger, server);
+                new TestCallbacks(client, Clock.systemUTC(), clientLogger, server, pullMode);
         TestCallbacks serverCallbacks =
-                new TestCallbacks(client, Clock.systemUTC(), serverLogger, client);
+                new TestCallbacks(server, Clock.systemUTC(), serverLogger, client, pullMode);
         DcSctpOptions options = new DcSctpOptions();
 
+        options.setEnableReceivePullMode(pullMode);
+
         server.socket =
-                factory.create("simpleConnectionServer", serverCallbacks, null, options);
+                factory.create(serverName, serverCallbacks, null, options);
         client.socket =
-                factory.create("simpleConnectionClient", clientCallbacks, null, options);
+                factory.create(clientName, clientCallbacks, null, options);
 
         client.socket.connect();
         try {
@@ -103,8 +118,8 @@ public class DcSctp4jTest {
         } catch (InterruptedException ignored) {
         }
 
-        assertEquals(client.socket.state(), SocketState.kConnected);
-        assertEquals(server.socket.state(), SocketState.kConnected);
+        assertEquals(SocketState.kConnected, client.socket.state());
+        assertEquals(SocketState.kConnected, server.socket.state());
 
         DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         SendOptions sendOptions = new SendOptions();
@@ -114,8 +129,8 @@ public class DcSctp4jTest {
         } catch (InterruptedException ignored) {
         }
 
-        assertEquals(client.socket.state(), SocketState.kConnected);
-        assertEquals(server.socket.state(), SocketState.kConnected);
+        assertEquals(SocketState.kConnected, client.socket.state());
+        assertEquals(SocketState.kConnected, server.socket.state());
 
         client.socket.shutdown();
         try {
@@ -123,8 +138,11 @@ public class DcSctp4jTest {
         } catch (InterruptedException ignored) {
         }
 
-        assertEquals(client.socket.state(), SocketState.kClosed);
-        assertEquals(server.socket.state(), SocketState.kClosed);
+        assertEquals(SocketState.kClosed, client.socket.state());
+        assertEquals(SocketState.kClosed, server.socket.state());
+
+        assertFalse(clientCallbacks.failed);
+        assertFalse(serverCallbacks.failed);
     }
 
     public static void main(String[] args) {
@@ -137,6 +155,8 @@ public class DcSctp4jTest {
         test.testSimpleConnection();
         /* System.out.println("Testing testExceptionThroughJNI");
         test.testExceptionThroughJNI(); */
+        System.out.println("Running testPullModeConnection");
+        test.testPullModeConnection();
         DcSctp4jTest.executor.shutdown();
     }
 }
@@ -179,26 +199,19 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     private final Clock clock;
     private final SocketWrapper wrapper;
     private final Logger logger;
+    private final boolean pullMode;
 
     private final SocketWrapper dest;
 
-    public TestCallbacks(SocketWrapper wrapper, Clock clock, Logger logger, SocketWrapper dest)
+    public boolean failed = false;
+
+    public TestCallbacks(SocketWrapper wrapper, Clock clock, Logger logger, SocketWrapper dest, boolean pullMode)
     {
         this.wrapper = wrapper;
         this.clock = clock;
         this.logger = logger;
+        this.pullMode = pullMode;
         this.dest = dest;
-    }
-
-    public static ByteBuffer cloneByteBuffer(final ByteBuffer original) {
-        // Create clone with same capacity as original.
-        final ByteBuffer clone = (original.isDirect()) ?
-                ByteBuffer.allocateDirect(original.capacity()) :
-                ByteBuffer.allocate(original.capacity());
-
-        clone.put(original);
-
-        return clone;
     }
 
     @Override
@@ -216,12 +229,14 @@ class TestCallbacks implements DcSctpSocketCallbacks {
                 try {
                     dest.socket.receivePacket(data, 0, data.length);
                 } catch (Exception e) {
+                    failed = true;
                     logger.error("Error processing received packet", e);
                 }
             });
         }
         catch (Exception e) {
             logger.error("Error submitting packet", e);
+            failed = true;
             return SendPacketStatus.kError;
         }
         return SendPacketStatus.kSuccess;
@@ -246,12 +261,35 @@ class TestCallbacks implements DcSctpSocketCallbacks {
 
     @Override
     public void OnMessageReceived(@NotNull DcSctpMessage message) {
+        assertFalse(pullMode);
         String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
         logger.info("Message received: " +
                 "streamID " + message.getStreamID() +
                 ", PPID " + message.getPpid() +
                 ", payload " + s);
+    }
+
+    @Override
+    public void OnMessageReady() {
+        try {
+            assertTrue(pullMode);
+            long messagesReady = wrapper.socket.messagesReady();
+            assert (messagesReady > 0);
+            logger.info(messagesReady + " messages ready");
+
+            DcSctpMessage message = wrapper.socket.getNextMessage();
+            assertNotNull(message);
+            String s = new String(message.getPayload(), StandardCharsets.UTF_8);
+
+            logger.info("Message received with pull: " +
+                    "streamID " + message.getStreamID() +
+                    ", PPID " + message.getPpid() +
+                    ", payload " + s);
+        } catch (Throwable e) {
+            failed = true;
+            logger.error("Error processing OnMessageReady", e);
+        }
     }
 
     @Override

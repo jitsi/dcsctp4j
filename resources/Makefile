@@ -36,6 +36,8 @@ CXXFLAGS += $(DEBUG) -fdata-sections
 CXXFLAGS += -ffunction-sections -fno-math-errno -fno-omit-frame-pointer
 CXXFLAGS += -gdwarf-4 -g2 -ggnu-pubnames -fvisibility=hidden -Wno-shadow
 CXXFLAGS += -Wundef -std=c++17 -Wno-trigraphs
+# Polyfill for std::identity for c++17.  If you move to c++20 remove this.
+CXXFLAGS += -include identity_polyfill.h
 CXXFLAGS += -fno-exceptions -fno-rtti
 CXXFLAGS += -fvisibility-inlines-hidden -Wnon-virtual-dtor -Woverloaded-virtual
 # Silence GCC 12 warnings.
@@ -53,8 +55,8 @@ TESTS = $(shell find $(S)/net/dcsctp -name "*_test*.cc")
 SOURCES = $(shell find $(S)/net/dcsctp -name "*.cc")
 OBJECTS = $(patsubst %.cc,%.o,$(filter-out $(TESTS),$(SOURCES)))
 # Assume all source files are in subdirectories and subsubdirectories of
-# net/dcsctp.
-DIRS = $(shell find $(S) -maxdepth 5 -type d -print)
+# webrtc/src.
+DIRS = $(shell find $(S) -maxdepth 6 -type d -print)
 # Add other objects required to fix libdcsctp4j.so errors; first compilation
 # errors, then undefined symbol errors reported at runtime by the dynamic
 # linker.
@@ -69,7 +71,12 @@ OBJECTS += $(S)/rtc_base/strings/string_format.o
 OBJECTS += $(S)/rtc_base/system_time.o
 OBJECTS += $(S)/rtc_base/time_utils.o
 OBJECTS += $(S)/third_party/abseil-cpp/absl/base/internal/raw_logging.o
-OBJECTS += $(S)/third_party/abseil-cpp/absl/types/bad_variant_access.o
+# absl/strings is complicated, so assume all non-test and non-benchmark .cc files
+# are needed.
+ABSL_STRINGS_TESTS = $(shell find $(S)/third_party/abseil-cpp/absl/strings -name "*_test*.cc" -o -name "*_benchmark*.cc")
+ABSL_STRINGS_SOURCES = $(shell find $(S)/third_party/abseil-cpp/absl/strings -name "*.cc")
+ABSL_STRINGS_OBJECTS = $(patsubst %.cc,%.o,$(filter-out $(ABSL_STRINGS_TESTS),$(ABSL_STRINGS_SOURCES)))
+OBJECTS += $(ABSL_STRINGS_OBJECTS)
 OBJECTS += $(S)/third_party/crc32c/src/src/crc32c.o
 OBJECTS += $(S)/third_party/crc32c/src/src/crc32c_portable.o
 # Keep built object paths separate from source code paths.

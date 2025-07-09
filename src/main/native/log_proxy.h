@@ -17,16 +17,16 @@
 #include <rtc_base/logging.h>
 #include "dcsctp4j.h"
 
-class LogProxy : public rtc::LogSink
+class LogProxy : public webrtc::LogSink
 {
 public:
-    LogProxy(JNIEnv * env, jLogProxy jProxy, rtc::LoggingSeverity minSeverity);
+    LogProxy(JNIEnv * env, jLogProxy jProxy, webrtc::LoggingSeverity minSeverity);
 
     virtual ~LogProxy();
 
 public:
     virtual void OnLogMessage(const std::string& message) override;
-    virtual void OnLogMessage(const rtc::LogLineRef& line) override;
+    virtual void OnLogMessage(const webrtc::LogLineRef& line) override;
 
 private:
     static void initialize_and_register(JNIEnv * env);

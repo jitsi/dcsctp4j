@@ -88,8 +88,8 @@ private:
     smjni::global_java_ref<jLogProxy_LoggingSeverity> m_LS_NONE;
 
 public:
-    jLogProxy_LoggingSeverity map(JNIEnv *, rtc::LoggingSeverity) const;
-    rtc::LoggingSeverity map(JNIEnv *, jLogProxy_LoggingSeverity) const;
+    jLogProxy_LoggingSeverity map(JNIEnv *, webrtc::LoggingSeverity) const;
+    webrtc::LoggingSeverity map(JNIEnv *, jLogProxy_LoggingSeverity) const;
 };
 
 class ResetStreamsStatus_members

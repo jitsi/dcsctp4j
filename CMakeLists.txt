@@ -17,6 +17,7 @@ endif ()
 set(JAVA_AWT_INCLUDE_PATH NotNeeded)
 set(JAVA_AWT_LIBRARY NotNeeded)
 find_package(JNI)
+set(JNI_INCLUDE_DIRS ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
@@ -62,12 +63,16 @@ target_compile_options(${PROJECT_NAME} PRIVATE
                        -fno-rtti
                        )
 
-target_include_directories(${PROJECT_NAME} PUBLIC
+target_include_directories(${PROJECT_NAME} PRIVATE
                            ${JNI_INCLUDE_DIRS}
                            ${CMAKE_CURRENT_LIST_DIR}/target/native/jnigen
+                           )
+
+target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE
                            ${WEBRTC_DIR}
                            ${WEBRTC_DIR}/third_party/abseil-cpp
                            )
+
 
 install(TARGETS ${PROJECT_NAME}
         RUNTIME DESTINATION "."
