@@ -22,6 +22,8 @@ USE_MAKEFILE=$5
 VERBOSE=$6
 DEBUG=$7
 
+CLANG_VERSION=19
+
 case $ARCH in
     "x86-64"|"x86_64"|"amd64"|"x64")
         JNAARCH=x86-64
@@ -36,7 +38,7 @@ case $ARCH in
     "ppc64le")
         JNAARCH=ppc64le
         DEBARCH=ppc64el
-        GN_ARCH=ppc64le
+        GN_ARCH=ppc64el
         GNU_ARCH=powerpc64le
         ;;
     *)
@@ -88,8 +90,19 @@ startdir=$PWD
 cd $WEBRTC_DIR
 rm -rf $WEBRTC_BUILD
 if test "$USE_MAKEFILE" != "BUILD_DCSCTP_WITH_MAKEFILE"; then
-    ./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
-    gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2"
+    if test \! "$ARCH" = "ppc64le"; then
+        ./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
+    fi
+    if test "$ARCH" = "ppc64le"; then
+        export AR=ar
+        export NM=nm
+        export CC=clang-${CLANG_VERSION}
+        export CXX=clang++-${CLANG_VERSION}
+
+        gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2 clang_base_path=\"/usr/lib/llvm-${CLANG_VERSION}\" host_toolchain=\"//build/toolchain/linux/unbundle:default\" custom_toolchain=\"//build/toolchain/linux/unbundle:default\" clang_use_chrome_plugins=false treat_warnings_as_errors=false host_cpu=\"ppc64\""
+    else
+        gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2"
+    fi
     ninja $VERBOSE_NINJA -C $WEBRTC_BUILD dcsctp
 else
     make $MAKE_ARGS -C $startdir/resources \
