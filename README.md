@@ -17,6 +17,16 @@ already checked-out versions of DepotTools and WebRTC.  Pass the path name of th
 build scripts; the DepotTools repository will be updated to the latest version, and the WebRTC repository
 to the version specified in `resources/WebRTC-revision.txt`.
 
+If you do not have a WebRTC checkout yet, setting `WEBRTC_SHALLOW=true` in the environment makes the build
+scripts create one without Git history (and without the MSan instrumented libraries), which is less than half
+the size of a full checkout:
+```
+$ WEBRTC_SHALLOW=true resources/ubuntu-build-all.sh ~/DepotTools ~/WebRTC
+```
+A shallow checkout can only be used for the WebRTC revision it was created with. When
+`resources/WebRTC-revision.txt` changes, the build scripts refuse to update it; delete the checkout directory
+and let the scripts create it again.
+
 ### Ubuntu
 
 Prerequisites:
