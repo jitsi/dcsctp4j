@@ -12,7 +12,7 @@ The JNI lib will need to be rebuilt if there is a change in the WebRTC version o
 C++ files.
 
 ### A note on WebRTC
-Because the checked-out Google source repositories are large, the build scripts provide an option to use
+Because the checked-out Google source repositories are large (22 GiB), the build scripts provide an option to use
 already checked-out versions of DepotTools and WebRTC.  Pass the path name of the these checkouts to the
 build scripts; the DepotTools repository will be updated to the latest version, and the WebRTC repository
 to the version specified in `resources/WebRTC-revision.txt`.
@@ -25,21 +25,31 @@ Prerequisites:
 - Maven
 - CMake
 - Git
-- APT packages `build-essential`, `g++-aarch64-linux-gnu`, `g++-powerpc64le-linux-gnu` and their dependencies
+- APT packages:
+  ```
+  build-essential
+  cmake
+  g++-aarch64-linux-gnu
+  g++-powerpc64le-linux-gnu
+  libgtk-3-dev
+  maven
+  openjdk-17-jdk-headless
+  pkg-config
+  ```
+  and their dependencies
 
 * Clone the project
 * Update the SimpleJNI subproject with
 ```
 $ git submodule update --init
 ```
-* Build the JNI headers
+* Check out WebRTC and build the libraries (adjusting the paths to depot_tools and WebRTC as desired)
 ```
-$ mvn compile
+$ resources/ubuntu-build-all.sh ~/depot_tools ~/WebRTC
 ```
-* Check out WebRTC and build the libraries (adjusting the paths to DepotTools and WebRTC as desired)
-
+* Package the jar file
 ```
-$ resources/ubuntu-build-all.sh ~/DepotTools ~/WebRTC
+$ mvn package
 ```
 
 > This will automatically check out
