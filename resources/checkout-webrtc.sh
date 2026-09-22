@@ -31,6 +31,8 @@ else
     cd "$parent"
     git clone "$DEPOT_TOOLS_REPO"
     export PATH="$PATH:$DEPOT_TOOLS_DIR"
+    # A fresh clone has to be bootstrapped before fetch/gclient can be used.
+    ensure_bootstrap
     cd "$STARTDIR"
 fi
 
