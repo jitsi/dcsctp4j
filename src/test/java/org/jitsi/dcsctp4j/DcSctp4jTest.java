@@ -24,6 +24,11 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -73,58 +78,180 @@ public class DcSctp4jTest {
 
     }
 
-    @Test
-    public void testSimpleConnection() {
+    /** A connected client/server socket pair, with the callbacks each side was created with. */
+    private static class ConnectedPair {
+        final SocketWrapper client = new SocketWrapper();
+        final SocketWrapper server = new SocketWrapper();
+        TestCallbacks clientCallbacks;
+        TestCallbacks serverCallbacks;
+    }
+
+    /**
+     * Creates a client and a server socket that send their packets to each other, connects them,
+     * and waits for both sides to report the connection established.
+     */
+    private ConnectedPair connectPair(String name) {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        ConnectedPair pair = new ConnectedPair();
 
-        SocketWrapper server = new SocketWrapper();
-        SocketWrapper client = new SocketWrapper();
+        Logger clientLogger = new LoggerImpl(this.getClass().getName() + "." + name + "Client");
+        clientLogger.addContext("name", name + "Client");
+        Logger serverLogger = new LoggerImpl(this.getClass().getName() + "." + name + "Server");
+        serverLogger.addContext("name", name + "Server");
 
-        Logger clientLogger = new LoggerImpl(this.getClass().getName() + ".simpleConnectionClient");
-        clientLogger.addContext("name", "simpleConnectionClient");
-
-        Logger serverLogger = new LoggerImpl(this.getClass().getName() + ".simpleConnectionServer");
-        serverLogger.addContext("name", "simpleConnectionServer");
-
-        TestCallbacks clientCallbacks =
-                new TestCallbacks(client, Clock.systemUTC(), clientLogger, server);
-        TestCallbacks serverCallbacks =
-                new TestCallbacks(client, Clock.systemUTC(), serverLogger, client);
+        pair.clientCallbacks = new TestCallbacks(pair.client, Clock.systemUTC(), clientLogger, pair.server);
+        pair.serverCallbacks = new TestCallbacks(pair.server, Clock.systemUTC(), serverLogger, pair.client);
         DcSctpOptions options = new DcSctpOptions();
 
-        server.socket =
-                factory.create("simpleConnectionServer", serverCallbacks, null, options);
-        client.socket =
-                factory.create("simpleConnectionClient", clientCallbacks, null, options);
+        pair.server.socket = factory.create(name + "Server", pair.serverCallbacks, null, options);
+        pair.client.socket = factory.create(name + "Client", pair.clientCallbacks, null, options);
 
-        client.socket.connect();
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException ignored) {
-        }
+        pair.client.socket.connect();
+        waitUntil(() -> pair.client.socket.state() == SocketState.kConnected
+                && pair.server.socket.state() == SocketState.kConnected, 2000);
+        assertEquals(SocketState.kConnected, pair.client.socket.state());
+        assertEquals(SocketState.kConnected, pair.server.socket.state());
+        return pair;
+    }
 
-        assertEquals(client.socket.state(), SocketState.kConnected);
-        assertEquals(server.socket.state(), SocketState.kConnected);
+    @Test
+    public void testSimpleConnection() {
+        ConnectedPair pair = connectPair("simpleConnection");
+        SocketWrapper client = pair.client;
+        SocketWrapper server = pair.server;
 
         DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         SendOptions sendOptions = new SendOptions();
         client.socket.send(message, sendOptions);
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException ignored) {
-        }
+        sleep(100);
 
-        assertEquals(client.socket.state(), SocketState.kConnected);
-        assertEquals(server.socket.state(), SocketState.kConnected);
+        assertEquals(SocketState.kConnected, client.socket.state());
+        assertEquals(SocketState.kConnected, server.socket.state());
 
         client.socket.shutdown();
-        try {
-            Thread.sleep(100);
-        } catch (InterruptedException ignored) {
+        waitUntil(() -> client.socket.state() == SocketState.kClosed
+                && server.socket.state() == SocketState.kClosed, 2000);
+
+        assertEquals(SocketState.kClosed, client.socket.state());
+        assertEquals(SocketState.kClosed, server.socket.state());
+    }
+
+    /** Invalid (offset, length) pairs for a 64-byte array. */
+    private static final int[][] INVALID_BOUNDS = {
+            {-16, 32},                      // negative offset
+            {0, -1},                        // negative length
+            {Integer.MAX_VALUE - 100, 200}, // offset + length overflows int
+            {0x40000000, 0x40000000},       // offset + length overflows int to exactly Integer.MIN_VALUE
+            {65, 0},                        // offset past end
+            {1, 64},                        // classic overrun
+    };
+
+    @Test
+    public void testReceivePacketRejectsInvalidBounds() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        Logger logger = new LoggerImpl("testReceivePacketRejectsInvalidBounds");
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null);
+        wrapper.socket = factory.create("testReceivePacketRejectsInvalidBounds", callbacks, null, new DcSctpOptions());
+
+        byte[] data = new byte[64];
+        for (int[] args : INVALID_BOUNDS) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> wrapper.socket.receivePacket(data, args[0], args[1]),
+                    "offset " + args[0] + " length " + args[1] + " should be rejected");
         }
 
-        assertEquals(client.socket.state(), SocketState.kClosed);
-        assertEquals(server.socket.state(), SocketState.kClosed);
+        // Valid boundary cases must not throw (the packet is simply dropped as malformed).
+        assertDoesNotThrow(() -> wrapper.socket.receivePacket(data, 0, 64));
+        assertDoesNotThrow(() -> wrapper.socket.receivePacket(data, 64, 0));
+        assertDoesNotThrow(() -> wrapper.socket.receivePacket(data, 32, 32));
+    }
+
+    /**
+     * The Java check in front of the native method means the test above only covers the Java side.
+     * Call the native method directly through reflection to verify the native check as well.
+     */
+    @Test
+    public void testNativeReceivePacketRejectsInvalidBounds() throws Exception {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        Logger logger = new LoggerImpl("testNativeReceivePacketRejectsInvalidBounds");
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null);
+        wrapper.socket = factory.create("testNativeReceivePacketRejectsInvalidBounds", callbacks, null, new DcSctpOptions());
+
+        Class<?> clazz = wrapper.socket.getClass();
+        Method receivePacket_ = clazz.getDeclaredMethod("receivePacket_", long.class, byte[].class, int.class, int.class);
+        receivePacket_.setAccessible(true);
+        java.lang.reflect.Field ptrField = clazz.getDeclaredField("ptr");
+        ptrField.setAccessible(true);
+        long ptr = ptrField.getLong(wrapper.socket);
+
+        byte[] data = new byte[64];
+        for (int[] args : INVALID_BOUNDS) {
+            InvocationTargetException e = assertThrows(InvocationTargetException.class,
+                    () -> receivePacket_.invoke(wrapper.socket, ptr, data, args[0], args[1]),
+                    "offset " + args[0] + " length " + args[1] + " should be rejected natively");
+            // Make sure it was the bounds check that rejected it, not some unrelated failure.
+            assertNotNull(e.getCause());
+            assertEquals("Invalid values for array length", e.getCause().getMessage());
+        }
+        assertDoesNotThrow(() -> receivePacket_.invoke(wrapper.socket, ptr, data, 0, 64));
+        assertDoesNotThrow(() -> receivePacket_.invoke(wrapper.socket, ptr, data, 64, 0));
+    }
+
+    @Test
+    public void testIncomingStreamsReset() {
+        ConnectedPair pair = connectPair("streamsReset");
+        SocketWrapper client = pair.client;
+        SocketWrapper server = pair.server;
+        TestCallbacks clientCallbacks = pair.clientCallbacks;
+        TestCallbacks serverCallbacks = pair.serverCallbacks;
+
+        // Use stream 3 so that it exists on both sides before resetting it.
+        DcSctpMessage message = new DcSctpMessage((short) 3, 0, "Hello".getBytes(StandardCharsets.UTF_8));
+        client.socket.send(message, new SendOptions());
+        sleep(100);
+
+        ResetStreamsStatus status = client.socket.resetStreams(Collections.singletonList((short) 3));
+        assertEquals(ResetStreamsStatus.kPerformed, status);
+        waitUntil(() -> !clientCallbacks.streamsResetPerformed.isEmpty()
+                && !serverCallbacks.incomingStreamsReset.isEmpty(), 2000);
+        // Allow a little extra time so that any spurious additional callbacks would show up.
+        sleep(100);
+
+        // The requester is told its outgoing streams were reset...
+        assertEquals(1, clientCallbacks.streamsResetPerformed.size(),
+                "client should get exactly one OnStreamsResetPerformed");
+        assertArrayEquals(new short[]{3}, clientCallbacks.streamsResetPerformed.get(0));
+        assertEquals(0, clientCallbacks.incomingStreamsReset.size(),
+                "client should not get OnIncomingStreamsReset");
+
+        // ...and the peer is told its incoming streams were reset, via the *incoming* callback.
+        assertEquals(1, serverCallbacks.incomingStreamsReset.size(),
+                "server should get exactly one OnIncomingStreamsReset");
+        assertArrayEquals(new short[]{3}, serverCallbacks.incomingStreamsReset.get(0));
+        assertEquals(0, serverCallbacks.streamsResetPerformed.size(),
+                "server should not get OnStreamsResetPerformed");
+        assertEquals(0, serverCallbacks.streamsResetFailed.size());
+        assertEquals(0, clientCallbacks.streamsResetFailed.size());
+
+        client.socket.shutdown();
+        sleep(100);
+    }
+
+    /** Polls {@code condition} until it holds or {@code timeoutMillis} elapses. */
+    private static void waitUntil(java.util.function.BooleanSupplier condition, long timeoutMillis) {
+        long deadline = System.currentTimeMillis() + timeoutMillis;
+        while (!condition.getAsBoolean() && System.currentTimeMillis() < deadline) {
+            sleep(10);
+        }
+    }
+
+    private static void sleep(long millis) {
+        try {
+            Thread.sleep(millis);
+        } catch (InterruptedException ignored) {
+        }
     }
 
     public static void main(String[] args) {
@@ -181,6 +308,10 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     private final Logger logger;
 
     private final SocketWrapper dest;
+
+    public final List<short[]> streamsResetPerformed = Collections.synchronizedList(new ArrayList<>());
+    public final List<short[]> incomingStreamsReset = Collections.synchronizedList(new ArrayList<>());
+    public final List<short[]> streamsResetFailed = Collections.synchronizedList(new ArrayList<>());
 
     public TestCallbacks(SocketWrapper wrapper, Clock clock, Logger logger, SocketWrapper dest)
     {
@@ -295,15 +426,18 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     public void OnStreamsResetFailed(@NotNull short[] outgoing_streams, @NotNull String reason) {
         logger.info("Stream reset failed for outgoing streams " + join(outgoing_streams) +
                 ": " + reason);
+        streamsResetFailed.add(outgoing_streams);
     }
 
     @Override
     public void OnStreamsResetPerformed(@NotNull short[] outgoing_streams) {
         logger.info("Stream reset performed for outgoing streams " + join(outgoing_streams));
+        streamsResetPerformed.add(outgoing_streams);
     }
 
     @Override
     public void OnIncomingStreamsReset(@NotNull short[] incoming_streams) {
         logger.info("Incoming streams reset for streams " + join(incoming_streams));
+        incomingStreamsReset.add(incoming_streams);
     }
 }

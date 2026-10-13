@@ -82,10 +82,12 @@ public class DcSctpSocketFactory
         @Override
         public synchronized void receivePacket(byte @NotNull [] data, int offset, int length)
         {
-            if (offset + length > data.length)
+            // Validate without addition so nothing can overflow.  Once offset and length are both
+            // non-negative, data.length - offset cannot overflow, and this also covers offset > data.length.
+            if (offset < 0 || length < 0 || length > data.length - offset)
             {
-                throw new IllegalArgumentException("Array length " + data.length +
-                        " too short for offset " + offset + " length " + length);
+                throw new IllegalArgumentException("Invalid offset " + offset + " and length " + length +
+                        " for array of length " + data.length);
             }
             receivePacket_(ptr, data, offset, length);
         }

@@ -22,7 +22,10 @@ import java.util.List;
 
 public interface DcSctpSocketInterface
 {
-    /** To be called when an incoming SCTP packet is to be processed. */
+    /** To be called when an incoming SCTP packet is to be processed. The packet
+     is the {@code length} bytes of {@code data} starting at {@code offset}; an
+     {@link IllegalArgumentException} is thrown if that range does not lie within
+     the array. */
     void receivePacket(byte @NotNull [] data, int offset, int length);
 
     /** To be called when a timeout has expired. The timeoutId is provided

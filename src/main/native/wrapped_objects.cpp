@@ -285,8 +285,7 @@ void WrappedSocketCallbacks::OnIncomingStreamsReset(
     transform(incoming_streams.cbegin(), incoming_streams.cend(), streamsAccess.begin(), [](auto s) { return *s; });
     streamsAccess.commit();
 
-    socketCallbacksClass.OnStreamsResetPerformed(env, socketCallbacks, jIncomingStreams);
-
+    socketCallbacksClass.OnIncomingStreamsReset(env, socketCallbacks, jIncomingStreams);
 }
 
 void WrappedSocketCallbacks::OnBufferedAmountLow(StreamID stream_id)

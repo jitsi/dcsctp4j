@@ -42,13 +42,18 @@ void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::receivePacket_(JNIEnv* 
 NATIVE_PROLOG
     auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
     java_array_access aData(env, data);
-    if (offset + length > aData.size()) {
+    /* Validate without addition so nothing can overflow: once offset and length are
+       both non-negative, size - offset cannot overflow, and length > size - offset
+       also covers offset > size. */
+    const jsize size = aData.size();
+    if (offset < 0 || length < 0 || length > size - offset) {
         auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Invalid values for array length"));
         throw java_exception(ex);
     }
     /* It's safe to expose the java array data directly for the duration of this call,
        because dcsctp will make a copy of anything it needs. */
-    auto dataView = rtc::ArrayView<const uint8_t>(reinterpret_cast<const uint8_t*>(aData.data()) + offset, length);
+    auto dataView = rtc::ArrayView<const uint8_t>(reinterpret_cast<const uint8_t*>(aData.data()) + offset,
+                                                  static_cast<size_t>(length));
     nativeSocket->socket->ReceivePacket(dataView);
 NATIVE_EPILOG
 }
