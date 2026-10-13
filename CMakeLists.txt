@@ -21,6 +21,16 @@ set(JNI_INCLUDE_DIRS ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# GCC 10 crashes (unbounded recursion in comp_template_parms) when emitting full
+# debug info for some of this project's template-heavy translation units. Limit
+# debug info to line tables (-g1) on that compiler; other compilers are unaffected.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+    foreach(cfg RELWITHDEBINFO DEBUG)
+        string(REGEX REPLACE "(^| )-g( |$)" "\\1-g1\\2" CMAKE_CXX_FLAGS_${cfg} "${CMAKE_CXX_FLAGS_${cfg}}")
+    endforeach()
+    message(STATUS "GCC ${CMAKE_CXX_COMPILER_VERSION}: limiting debug info to -g1 to avoid a compiler crash")
+endif()
+
 # dcsctp's public headers use std::span and other C++20 features.
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
