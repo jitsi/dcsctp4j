@@ -41,6 +41,8 @@ CXXFLAGS += -fvisibility-inlines-hidden -Wnon-virtual-dtor -Woverloaded-virtual
 # Silence GCC 12 warnings.
 CXXFLAGS += -Wno-return-type -Wno-overloaded-virtual -Wno-comment -Wno-undef
 CXXFLAGS += -Wno-redundant-move
+# GCC 10 at -O2 reports a false -Wmaybe-uninitialized in rtc_base/logging.cc.
+CXXFLAGS += -Wno-maybe-uninitialized
 # Add include paths to fix compilation errors due to missing headers.
 CXXFLAGS += -I$(S)
 CXXFLAGS += -I$(S)/third_party/abseil-cpp
