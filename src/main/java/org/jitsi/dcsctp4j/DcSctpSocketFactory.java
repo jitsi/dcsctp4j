@@ -22,6 +22,7 @@ import smjni.jnigen.ExposeToNative;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.LongBinaryOperator;
 import java.util.stream.Collectors;
 
 @ExposeToNative
@@ -61,6 +62,29 @@ public class DcSctpSocketFactory
             @NotNull DcSctpSocketCallbacks callbacks,
             @Nullable PacketObserver packetObserver,
             @NotNull DcSctpOptions options);
+
+    /**
+     * Generates a connection token for an out-of-band connection sequence: a serialized
+     * SCTP INIT chunk describing this side's capabilities under {@code options}. The token
+     * is to be exchanged with the peer out of band, after which both sides call
+     * {@link DcSctpSocketInterface#connectWithConnectionToken} with their own and the
+     * peer's token.
+     *
+     * {@code getRandomInt} must return a uniformly random value in the range
+     * {@code [low, high)}; it is used in the same way as
+     * {@link DcSctpSocketCallbacks#getRandomInt}.
+     */
+    public byte @NotNull [] generateConnectionToken(
+            @NotNull DcSctpOptions options,
+            @NotNull LongBinaryOperator getRandomInt)
+    {
+        return generateConnectionToken_(ptr, options, getRandomInt);
+    }
+
+    private native byte[] generateConnectionToken_(
+            long ptr,
+            @NotNull DcSctpOptions options,
+            @NotNull LongBinaryOperator getRandomInt);
 
     @ExposeToNative
     static private class NativeSctpSocket implements DcSctpSocketInterface
@@ -125,6 +149,14 @@ public class DcSctpSocketFactory
         }
 
         private native void connect_(long ptr);
+
+        @Override
+        public synchronized boolean connectWithConnectionToken(byte @NotNull [] myData, byte @NotNull [] peerData)
+        {
+            return connectWithConnectionToken_(ptr, myData, peerData);
+        }
+
+        private native boolean connectWithConnectionToken_(long ptr, byte[] myData, byte[] peerData);
 
         @Override
         public synchronized void shutdown()

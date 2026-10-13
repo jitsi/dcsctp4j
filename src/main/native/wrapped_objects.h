@@ -18,18 +18,20 @@
 #define WRAPPED_OBJECTS_H_
 
 #include <smjni/smjni.h>
+#include <span>
 #include "all_classes.h"
 #include <net/dcsctp/public/dcsctp_socket.h>
+#include <net/dcsctp/public/packet_observer.h>
 
 class WrappedSocketCallbacks: public dcsctp::DcSctpSocketCallbacks {
   public:
     WrappedSocketCallbacks(jDcSctpSocketCallbacks);
     virtual ~WrappedSocketCallbacks() = default;
 
-    virtual void SendPacket(webrtc::ArrayView<const uint8_t> data) override;
+    virtual void SendPacket(std::span<const uint8_t> data) override;
 
     virtual dcsctp::SendPacketStatus SendPacketWithStatus(
-        webrtc::ArrayView<const uint8_t> data) override;
+        std::span<const uint8_t> data) override;
 
     virtual std::unique_ptr<dcsctp::Timeout> CreateTimeout(
         webrtc::TaskQueueBase::DelayPrecision precision) override;
@@ -55,14 +57,14 @@ class WrappedSocketCallbacks: public dcsctp::DcSctpSocketCallbacks {
     virtual void OnConnectionRestarted() override;
 
     virtual void OnStreamsResetFailed(
-        webrtc::ArrayView<const dcsctp::StreamID> outgoing_streams,
+        std::span<const dcsctp::StreamID> outgoing_streams,
         absl::string_view reason) override;
 
     virtual void OnStreamsResetPerformed(
-        webrtc::ArrayView<const dcsctp::StreamID> outgoing_streams) override;
+        std::span<const dcsctp::StreamID> outgoing_streams) override;
 
     virtual void OnIncomingStreamsReset(
-        webrtc::ArrayView<const dcsctp::StreamID> incoming_streams) override;
+        std::span<const dcsctp::StreamID> incoming_streams) override;
 
     virtual void OnBufferedAmountLow(dcsctp::StreamID stream_id) override;
 
@@ -81,8 +83,8 @@ class WrappedPacketObserver: public dcsctp::PacketObserver {
  public:
     WrappedPacketObserver(jPacketObserver);
     virtual ~WrappedPacketObserver() = default;
-    virtual void OnSentPacket(dcsctp::TimeMs now, webrtc::ArrayView<const uint8_t> payload) override;
-    virtual void OnReceivedPacket(dcsctp::TimeMs now, webrtc::ArrayView<const uint8_t> payload) override;
+    virtual void OnSentPacket(dcsctp::TimeMs now, std::span<const uint8_t> payload) override;
+    virtual void OnReceivedPacket(dcsctp::TimeMs now, std::span<const uint8_t> payload) override;
 
   private:
     PacketObserver_class packetObserverClass;

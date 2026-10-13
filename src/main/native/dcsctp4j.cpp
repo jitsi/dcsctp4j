@@ -90,3 +90,27 @@ NATIVE_PROLOG
     return (jlong)(intptr_t)nativeSocket.release();
 NATIVE_EPILOG_Z
 }
+
+jbyteArray JNICALL DcSctpSocketFactory_class::generateConnectionToken_(JNIEnv *env, jDcSctpSocketFactory, jlong ptr, jDcSctpOptions jOptions, jLongBinaryOperator jGetRandomInt)
+{
+NATIVE_PROLOG
+    auto factory = (DcSctpSocketFactory*)(intptr_t)ptr;
+
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    auto & operatorClass = java_classes::get<LongBinaryOperator_class>();
+    /* GenerateConnectionToken calls this synchronously, so env stays valid for the duration. */
+    auto getRandomInt = [env, &operatorClass, jGetRandomInt](uint32_t low, uint32_t high) -> uint32_t {
+        return static_cast<uint32_t>(operatorClass.applyAsLong(env, jGetRandomInt, low, high));
+    };
+
+    vector<uint8_t> token = factory->GenerateConnectionToken(*options, getRandomInt);
+
+    auto jToken = java_array_create<jbyte>(env, token.size());
+    auto aToken = java_array_access(env, jToken);
+    copy(token.cbegin(), token.cend(), aToken.begin());
+    aToken.commit();
+
+    return jToken.release();
+NATIVE_EPILOG_Z
+}

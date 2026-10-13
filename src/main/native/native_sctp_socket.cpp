@@ -15,6 +15,7 @@
  */
 
 #include <smjni/smjni.h>
+#include <span>
 #include "all_classes.h"
 #include <net/dcsctp/public/dcsctp_socket.h>
 #include "native_sctp_socket.h"
@@ -52,12 +53,32 @@ NATIVE_PROLOG
     }
     /* It's safe to expose the java array data directly for the duration of this call,
        because dcsctp will make a copy of anything it needs. */
-    auto dataView = rtc::ArrayView<const uint8_t>(reinterpret_cast<const uint8_t*>(aData.data()) + offset,
-                                                  static_cast<size_t>(length));
+    auto dataView = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(aData.data()) + offset,
+                                             static_cast<size_t>(length));
     nativeSocket->socket->ReceivePacket(dataView);
 NATIVE_EPILOG
 }
 
+jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::messagesReady_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
+{
+NATIVE_PROLOG
+    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+    return nativeSocket->socket->MessagesReady();
+NATIVE_EPILOG_Z
+}
+
+jDcSctpMessage JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getNextMessage_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
+{
+NATIVE_PROLOG
+    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+    auto msg = nativeSocket->socket->GetNextMessage();
+    if (!msg) {
+        return nullptr;
+    }
+
+    return convertDcSctpMessage(env, *msg).release();
+NATIVE_EPILOG_Z
+}
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::handleTimeout_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jlong timeoutId)
 {
@@ -74,6 +95,20 @@ NATIVE_PROLOG
     auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
     nativeSocket->socket->Connect();
 NATIVE_EPILOG
+}
+
+
+jboolean JNICALL DcSctpSocketFactory_NativeSctpSocket_class::connectWithConnectionToken_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray myData, jbyteArray peerData)
+{
+NATIVE_PROLOG
+    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+    java_array_access aMyData(env, myData);
+    java_array_access aPeerData(env, peerData);
+    /* As with receivePacket_, dcsctp copies what it needs, so the Java arrays can be exposed directly. */
+    auto mySpan = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(aMyData.data()), aMyData.size());
+    auto peerSpan = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(aPeerData.data()), aPeerData.size());
+    return nativeSocket->socket->ConnectWithConnectionToken(mySpan, peerSpan) ? java_true : java_false;
+NATIVE_EPILOG_Z
 }
 
 
@@ -261,6 +296,20 @@ DcSctpMessage convertDcSctpMessage(JNIEnv* env, jDcSctpMessage jmessage)
 
     auto message = DcSctpMessage(StreamID(streamID), PPID(ppid), vPayload);
     return message;
+}
+
+local_java_ref<jDcSctpMessage> convertDcSctpMessage(JNIEnv* env, const DcSctpMessage& message)
+{
+    auto payload = message.payload();
+    auto jPayload = java_array_create<jbyte>(env, payload.size());
+    auto aPayload = java_array_access(env, jPayload);
+    copy(payload.begin(), payload.end(), aPayload.begin());
+    aPayload.commit();
+
+    auto messageClass = java_classes::get<DcSctpMessage_class>();
+    auto jmessage = messageClass.ctor(env, *message.stream_id(), *message.ppid(), jPayload);
+
+    return jmessage;
 }
 
 SendOptions convertSendOptions(JNIEnv* env, jSendOptions jOptions)

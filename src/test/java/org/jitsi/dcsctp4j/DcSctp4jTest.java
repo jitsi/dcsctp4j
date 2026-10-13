@@ -24,6 +24,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.lang.reflect.InvocationTargetException;
@@ -262,6 +263,54 @@ public class DcSctp4jTest {
         while (!condition.getAsBoolean() && System.currentTimeMillis() < deadline) {
             sleep(10);
         }
+    }
+
+    @Test
+    public void testConnectWithConnectionToken() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        ConnectedPair pair = new ConnectedPair();
+        Logger clientLogger = new LoggerImpl(this.getClass().getName() + ".tokenClient");
+        Logger serverLogger = new LoggerImpl(this.getClass().getName() + ".tokenServer");
+        pair.clientCallbacks = new TestCallbacks(pair.client, Clock.systemUTC(), clientLogger, pair.server, false);
+        pair.serverCallbacks = new TestCallbacks(pair.server, Clock.systemUTC(), serverLogger, pair.client, false);
+        DcSctpOptions options = new DcSctpOptions();
+
+        pair.server.socket = factory.create("tokenServer", pair.serverCallbacks, null, options);
+        pair.client.socket = factory.create("tokenClient", pair.clientCallbacks, null, options);
+
+        // Out-of-band connection: each side generates a token, the tokens are exchanged
+        // out of band, and each side finishes the connection with both tokens.
+        byte[] clientToken = factory.generateConnectionToken(options,
+                (low, high) -> ThreadLocalRandom.current().nextLong(low, high));
+        byte[] serverToken = factory.generateConnectionToken(options,
+                (low, high) -> ThreadLocalRandom.current().nextLong(low, high));
+        assertTrue(clientToken.length > 0);
+        assertTrue(serverToken.length > 0);
+        assertFalse(Arrays.equals(clientToken, serverToken), "tokens should carry different random tags");
+
+        // Garbage is rejected without connecting.
+        assertFalse(pair.client.socket.connectWithConnectionToken(new byte[]{1, 2, 3}, serverToken));
+        assertEquals(SocketState.kClosed, pair.client.socket.state());
+
+        assertTrue(pair.client.socket.connectWithConnectionToken(clientToken, serverToken));
+        assertTrue(pair.server.socket.connectWithConnectionToken(serverToken, clientToken));
+        assertEquals(SocketState.kConnected, pair.client.socket.state());
+        assertEquals(SocketState.kConnected, pair.server.socket.state());
+
+        // The association works: a message gets through and the sockets stay connected.
+        DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
+        pair.client.socket.send(message, new SendOptions());
+        sleep(100);
+        assertEquals(SocketState.kConnected, pair.client.socket.state());
+        assertEquals(SocketState.kConnected, pair.server.socket.state());
+
+        pair.client.socket.shutdown();
+        waitUntil(() -> pair.client.socket.state() == SocketState.kClosed
+                && pair.server.socket.state() == SocketState.kClosed, 2000);
+        assertEquals(SocketState.kClosed, pair.client.socket.state());
+        assertEquals(SocketState.kClosed, pair.server.socket.state());
+        assertFalse(pair.clientCallbacks.failed);
+        assertFalse(pair.serverCallbacks.failed);
     }
 
     private static void sleep(long millis) {

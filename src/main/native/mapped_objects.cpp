@@ -714,6 +714,24 @@ NATIVE_PROLOG
 NATIVE_EPILOG
 }
 
+jboolean JNICALL DcSctpOptions_class::getEnableHandoverWithOutstandingData(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return options->enable_handover_with_outstanding_data ? java_true : java_false;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setEnableHandoverWithOutstandingData(JNIEnv* env, jDcSctpOptions jOptions, jboolean enableHandoverWithOutstandingData)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->enable_handover_with_outstanding_data = enableHandoverWithOutstandingData ? true : false;
+NATIVE_EPILOG
+}
+
 
 void JNICALL Metrics_class::destruct(JNIEnv* env, jclass, jlong ptr)
 {

@@ -382,6 +382,14 @@ public class DcSctpOptions
     public native void setZeroChecksumAlternateErrorDetectionMethod(int zeroChecksumAlternateErrorDetectionMethod);
 
     /**
+     * EXPERIMENTAL: If true, allows handover even if there is outstanding data
+     * on the connection.
+     */
+    public native boolean getEnableHandoverWithOutstandingData();
+
+    public native void setEnableHandoverWithOutstandingData(boolean enableHandoverWithOutstandingData);
+
+    /**
      * The largest safe SCTP packet. Starting from the minimum guaranteed MTU
      * value of 1280 for IPv6 (which may not support fragmentation), take off 85
      * bytes for DTLS/TURN/TCP/IP and ciphertext overhead.

@@ -21,10 +21,13 @@ set(JNI_INCLUDE_DIRS ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(CMAKE_CXX_STANDARD 17)
+# dcsctp's public headers use std::span and other C++20 features.
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_subdirectory("SimpleJNI" ${CMAKE_CURRENT_BINARY_DIR}/SimpleJNI)
+# EXCLUDE_FROM_ALL keeps SimpleJNI's own install rules (headers, static library,
+# CMake package files) out of our install tree, which is packaged into the JAR.
+add_subdirectory("SimpleJNI" ${CMAKE_CURRENT_BINARY_DIR}/SimpleJNI EXCLUDE_FROM_ALL)
 
 add_library(dcsctp STATIC IMPORTED)
 set_target_properties(dcsctp PROPERTIES

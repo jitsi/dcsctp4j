@@ -38,7 +38,7 @@ local_java_ref<jPacketObserver> WrappedPacketObserver::getObj(JNIEnv *env)
     return obj;
 }
 
-void WrappedPacketObserver::OnSentPacket(TimeMs now, webrtc::ArrayView<const uint8_t> payload)
+void WrappedPacketObserver::OnSentPacket(TimeMs now, std::span<const uint8_t> payload)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -46,13 +46,13 @@ void WrappedPacketObserver::OnSentPacket(TimeMs now, webrtc::ArrayView<const uin
     
     auto jPayload = java_array_create<jbyte>(env, payload.size());
     auto aPayload = java_array_access(env, jPayload);
-    copy(payload.cbegin(), payload.cend(), aPayload.begin());
+    copy(payload.begin(), payload.end(), aPayload.begin());
     aPayload.commit();
 
     packetObserverClass.OnSentPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
 }
 
-void WrappedPacketObserver::OnReceivedPacket(TimeMs now, webrtc::ArrayView<const uint8_t> payload)
+void WrappedPacketObserver::OnReceivedPacket(TimeMs now, std::span<const uint8_t> payload)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -60,7 +60,7 @@ void WrappedPacketObserver::OnReceivedPacket(TimeMs now, webrtc::ArrayView<const
     
     auto jPayload = java_array_create<jbyte>(env, payload.size());
     auto aPayload = java_array_access(env, jPayload);
-    copy(payload.cbegin(), payload.cend(), aPayload.begin());
+    copy(payload.begin(), payload.end(), aPayload.begin());
     aPayload.commit();
 
     packetObserverClass.OnReceivedPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
@@ -116,13 +116,13 @@ local_java_ref<jDcSctpSocketCallbacks> WrappedSocketCallbacks::getObj(JNIEnv *en
 }
 
 
-void WrappedSocketCallbacks::SendPacket(webrtc::ArrayView<const uint8_t> data)
+void WrappedSocketCallbacks::SendPacket(std::span<const uint8_t> data)
 {
     SendPacketWithStatus(data);
 }
 
 SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
-        webrtc::ArrayView<const uint8_t> data)
+        std::span<const uint8_t> data)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -130,7 +130,7 @@ SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
 
     auto jData = java_array_create<jbyte>(env, data.size());
     auto aData = java_array_access(env, jData);
-    copy(data.cbegin(), data.cend(), aData.begin());
+    copy(data.begin(), data.end(), aData.begin());
     aData.commit();
 
     jint status = socketCallbacksClass.sendPacketWithStatus_(env, socketCallbacks, jData.c_ptr());
@@ -185,7 +185,7 @@ void WrappedSocketCallbacks::OnMessageReceived(DcSctpMessage message)
     auto payload = message.payload();
     auto jPayload = java_array_create<jbyte>(env, payload.size());
     auto aPayload = java_array_access(env, jPayload);
-    copy(payload.cbegin(), payload.cend(), aPayload.begin());
+    copy(payload.begin(), payload.end(), aPayload.begin());
     aPayload.commit();
 
     socketCallbacksClass.OnMessageReceived_(env, socketCallbacks, jPayload.c_ptr(), *message.ppid(), *message.stream_id());
@@ -250,7 +250,7 @@ void WrappedSocketCallbacks::OnConnectionRestarted()
 }
 
 void WrappedSocketCallbacks::OnStreamsResetFailed(
-        webrtc::ArrayView<const StreamID> outgoing_streams,
+        std::span<const StreamID> outgoing_streams,
         absl::string_view reason)
 {
     JNIEnv* env = jni_provider::get_jni();
@@ -259,7 +259,7 @@ void WrappedSocketCallbacks::OnStreamsResetFailed(
 
     auto jOutgoingStreams = java_array_create<jshort>(env, outgoing_streams.size());
     java_array_access streamsAccess(env, jOutgoingStreams.c_ptr());
-    transform(outgoing_streams.cbegin(), outgoing_streams.cend(), streamsAccess.begin(), [](auto s) { return *s; });
+    transform(outgoing_streams.begin(), outgoing_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
     streamsAccess.commit();
 
     auto jreason = java_string_create(env, reason.data(), reason.size());
@@ -268,7 +268,7 @@ void WrappedSocketCallbacks::OnStreamsResetFailed(
 }
 
 void WrappedSocketCallbacks::OnStreamsResetPerformed(
-        webrtc::ArrayView<const StreamID> outgoing_streams)
+        std::span<const StreamID> outgoing_streams)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -276,14 +276,14 @@ void WrappedSocketCallbacks::OnStreamsResetPerformed(
 
     auto jOutgoingStreams = java_array_create<jshort>(env, outgoing_streams.size());
     java_array_access streamsAccess(env, jOutgoingStreams.c_ptr());
-    transform(outgoing_streams.cbegin(), outgoing_streams.cend(), streamsAccess.begin(), [](auto s) { return *s; });
+    transform(outgoing_streams.begin(), outgoing_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
     streamsAccess.commit();
 
     socketCallbacksClass.OnStreamsResetPerformed(env, socketCallbacks, jOutgoingStreams);
 }
 
 void WrappedSocketCallbacks::OnIncomingStreamsReset(
-        webrtc::ArrayView<const StreamID> incoming_streams)
+        std::span<const StreamID> incoming_streams)
 {
     JNIEnv* env = jni_provider::get_jni();
 
@@ -291,7 +291,7 @@ void WrappedSocketCallbacks::OnIncomingStreamsReset(
 
     auto jIncomingStreams = java_array_create<jshort>(env, incoming_streams.size());
     java_array_access streamsAccess(env, jIncomingStreams.c_ptr());
-    transform(incoming_streams.cbegin(), incoming_streams.cend(), streamsAccess.begin(), [](auto s) { return *s; });
+    transform(incoming_streams.begin(), incoming_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
     streamsAccess.commit();
 
     socketCallbacksClass.OnIncomingStreamsReset(env, socketCallbacks, jIncomingStreams);

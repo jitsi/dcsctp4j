@@ -35,9 +35,7 @@ CXXFLAGS += -D__TIMESTAMP__= -no-canonical-prefixes
 CXXFLAGS += $(DEBUG) -fdata-sections
 CXXFLAGS += -ffunction-sections -fno-math-errno -fno-omit-frame-pointer
 CXXFLAGS += -gdwarf-4 -g2 -ggnu-pubnames -fvisibility=hidden -Wno-shadow
-CXXFLAGS += -Wundef -std=c++17 -Wno-trigraphs
-# Polyfill for std::identity for c++17.  If you move to c++20 remove this.
-CXXFLAGS += -include identity_polyfill.h
+CXXFLAGS += -Wundef -std=c++20 -Wno-trigraphs
 CXXFLAGS += -fno-exceptions -fno-rtti
 CXXFLAGS += -fvisibility-inlines-hidden -Wnon-virtual-dtor -Woverloaded-virtual
 # Silence GCC 12 warnings.

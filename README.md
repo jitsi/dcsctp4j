@@ -36,6 +36,9 @@ Prerequisites:
 - CMake
 - Git
 - APT packages `build-essential`, `g++-aarch64-linux-gnu`, `g++-powerpc64le-linux-gnu` and their dependencies
+- GCC 10 or newer, because WebRTC's headers require C++20. On Ubuntu 20.04, whose default GCC is 9,
+  install `g++-10`, `g++-10-aarch64-linux-gnu` and `g++-10-powerpc64le-linux-gnu`; the build scripts
+  pick the versioned compilers automatically when the default `g++` is too old.
 
 * Clone the project
 * Update the SimpleJNI subproject with

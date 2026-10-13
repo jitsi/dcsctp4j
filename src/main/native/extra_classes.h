@@ -111,6 +111,22 @@ inline Instant_class::Instant_class(JNIEnv * env):
     m_getNano(env, *this, "getNano")
 {}
 
-#define EXTRA_CLASSES Integer_class, Long_class, Instant_class
+class LongBinaryOperator_class : public smjni::java_runtime::simple_java_class<jLongBinaryOperator>
+{
+public:
+    LongBinaryOperator_class(JNIEnv * env);
+
+    jlong applyAsLong(JNIEnv * env, const smjni::auto_java_ref<jLongBinaryOperator> & self, jlong left, jlong right) const
+        { return m_applyAsLong(env, self, left, right); }
+private:
+    const smjni::java_method<jlong, jLongBinaryOperator, jlong, jlong> m_applyAsLong;
+};
+
+inline LongBinaryOperator_class::LongBinaryOperator_class(JNIEnv * env):
+    simple_java_class(env),
+    m_applyAsLong(env, *this, "applyAsLong")
+{}
+
+#define EXTRA_CLASSES Integer_class, Long_class, Instant_class, LongBinaryOperator_class
 
 #endif
