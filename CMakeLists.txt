@@ -50,6 +50,7 @@ add_library(${PROJECT_NAME} SHARED
             src/main/native/wrapped_objects.cpp
             src/main/native/mapped_objects.cpp
             src/main/native/native_sctp_socket.cpp
+            src/main/native/native_sctp_socket_arrays.cpp
             src/main/native/enum_members.cpp
             src/main/native/log_proxy.cpp
             )
