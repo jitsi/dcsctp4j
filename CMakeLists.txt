@@ -22,8 +22,10 @@ set(JNI_INCLUDE_DIRS ${JAVA_INCLUDE_PATH} ${JAVA_INCLUDE_PATH2})
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # GCC 10 crashes (unbounded recursion in comp_template_parms) when emitting full
-# debug info for some of this project's template-heavy translation units. Limit
-# debug info to line tables (-g1) on that compiler; other compilers are unaffected.
+# debug info for a translation unit that instantiates both SimpleJNI's
+# java_class_table and this project's enum_members_table and also emits the type
+# WrappedPacketObserver (dcsctp4j.cpp and native_sctp_socket.cpp do). Limit debug
+# info to line tables (-g1) on that compiler; GCC 11 and later are unaffected.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
     foreach(cfg RELWITHDEBINFO DEBUG)
         string(REGEX REPLACE "(^| )-g( |$)" "\\1-g1\\2" CMAKE_CXX_FLAGS_${cfg} "${CMAKE_CXX_FLAGS_${cfg}}")
