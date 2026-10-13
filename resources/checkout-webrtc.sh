@@ -70,6 +70,16 @@ SYNC_OPTS=()
 if test -r "$WEBRTC_DIR/.gclient"; then
     # Already existing gclient checkout; continue
     cd "$WEBRTC_DIR"
+    if branch="$(git -C src symbolic-ref -q --short HEAD 2>/dev/null)"; then
+        # gclient sync refuses to move a branch to an upstream other than the
+        # one it tracks ("Could not switch upstream branch ..."), which happens
+        # if someone has checked out e.g. main to look at the latest WebRTC.
+        # It is happy to check out any revision on a detached HEAD, which is
+        # also how it leaves the checkout itself, so detach. The branch is
+        # left where it is.
+        echo "Detaching WebRTC checkout from branch $branch so gclient can sync it"
+        git -C src checkout --detach
+    fi
     if test "$(git -C src rev-parse --is-shallow-repository 2>/dev/null)" = true; then
         have="$(git -C src rev-parse HEAD)"
         want="$(resolve_rev)"
