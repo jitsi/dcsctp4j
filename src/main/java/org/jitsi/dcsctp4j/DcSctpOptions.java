@@ -150,6 +150,16 @@ public class DcSctpOptions
     public native void setMaxReceiverWindowBufferSize(long maxReceiverWindowBufferSize);
 
     /**
+     * Enables receive pull mode - {@link DcSctpSocketCallbacks#OnMessageReady} will be
+     * called when there are messages ready to be read instead of
+     * {@link DcSctpSocketCallbacks#OnMessageReceived}.  It is up to the
+     * caller to call {@link DcSctpSocketInterface#getNextMessage()} to receive the messages.
+     */
+    public native boolean getEnableReceivePullMode();
+
+    public native void setEnableReceivePullMode(boolean enableReceivePullMode);
+
+    /**
      * Send queue total size limit. It will not be possible to queue more data if
      * the queue size is larger than this number.
      */
@@ -254,8 +264,11 @@ public class DcSctpOptions
      * processing time of received packets and the clock granularity when setting
      * the delayed ack timer on the peer.
      *
-     * This is described for TCP in
+     * This is defined as "G" in the algorithm for TCP in
      * https://datatracker.ietf.org/doc/html/rfc6298#section-4.
+     *
+     * Note that this value will be further adjusted by scaling factors, so if you
+     * intend to change this, do it incrementally and measure the results.
      */
     public native long getMinRttVariance();
 
@@ -293,6 +306,21 @@ public class DcSctpOptions
 
     public native void setAvoidFragmentationCwndMtus(long avoidFragmentationCwndMtus);
 
+   /**
+    * When the congestion window is below this number of MTUs, sent data chunks
+    * will have the "I" (Immediate SACK - RFC7053) bit set. That will prevent the
+    * receiver from delaying the SACK, which result in shorter time until the
+    * sender can send the next packet as its driven by SACKs. This can reduce
+    * latency for low utilized and lossy connections.
+    *
+    * Default value set to be same as initial congestion window. Set to zero to
+    * disable.
+    */
+  public native long getImmediateSackUnderCwndMtus();
+
+  public native void setImmediateSackUnderCwndMtus(long immediateSackUnderCwndMtus);
+
+
     /**
      * The number of packets that may be sent at once. This is limited to avoid
      * bursts that too quickly fill the send buffer. Typically in a a socket in
@@ -306,7 +334,7 @@ public class DcSctpOptions
     public native void setMaxBurst(int maxBurst);
 
     /**
-     * Maximum Data Retransmit Attempts (per DATA chunk). Set to absl::nullopt for
+     * Maximum Data Retransmit Attempts (per DATA chunk). Set to null for
      * no limit.
      */
     @Nullable

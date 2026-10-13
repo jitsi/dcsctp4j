@@ -182,6 +182,25 @@ NATIVE_EPILOG
 }
 
 
+jboolean JNICALL DcSctpOptions_class::getEnableReceivePullMode(JNIEnv_* env, _jDcSctpOptions* jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return options->enable_receive_pull_mode ? java_true : java_false;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setEnableReceivePullMode(JNIEnv* env, jDcSctpOptions jOptions, jboolean enableReceivePullMode)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->enable_receive_pull_mode = enableReceivePullMode ? true : false;
+NATIVE_EPILOG
+}
+
+
 jlong JNICALL DcSctpOptions_class::getMaxReceiverWindowBufferSize(JNIEnv* env, jDcSctpOptions jOptions)
 {
 NATIVE_PROLOG
@@ -521,6 +540,25 @@ NATIVE_PROLOG
     DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
 
     options->avoid_fragmentation_cwnd_mtus = avoidFragmentationCwndMtus;
+NATIVE_EPILOG
+}
+
+
+jlong JNICALL DcSctpOptions_class::getImmediateSackUnderCwndMtus(JNIEnv* env, jDcSctpOptions jOptions)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    return options->immediate_sack_under_cwnd_mtus;
+NATIVE_EPILOG_Z
+}
+
+void JNICALL DcSctpOptions_class::setImmediateSackUnderCwndMtus(JNIEnv* env, jDcSctpOptions jOptions, jlong immediateSackUnderCwndMtus)
+{
+NATIVE_PROLOG
+    DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
+
+    options->immediate_sack_under_cwnd_mtus = immediateSackUnderCwndMtus;
 NATIVE_EPILOG
 }
 
