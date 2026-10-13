@@ -30,6 +30,7 @@ import java.util.List;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -138,8 +139,11 @@ public class DcSctp4jTest {
         DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         SendOptions sendOptions = new SendOptions();
         client.socket.send(message, sendOptions);
-        sleep(100);
+        waitUntil(() -> pair.serverCallbacks.messagesReceived.get() > 0, 2000);
 
+        assertEquals(1, pair.serverCallbacks.messagesReceived.get(),
+                "server should have received the message via " + (pullMode ? "OnMessageReady" : "OnMessageReceived"));
+        assertEquals(0, pair.clientCallbacks.messagesReceived.get());
         assertEquals(SocketState.kConnected, client.socket.state());
         assertEquals(SocketState.kConnected, server.socket.state());
 
@@ -379,6 +383,8 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     private final SocketWrapper dest;
 
     public volatile boolean failed = false;
+    /** Messages received, whether delivered by OnMessageReceived or fetched after OnMessageReady. */
+    public final AtomicInteger messagesReceived = new AtomicInteger();
 
     public final List<short[]> streamsResetPerformed = Collections.synchronizedList(new ArrayList<>());
     public final List<short[]> incomingStreamsReset = Collections.synchronizedList(new ArrayList<>());
@@ -441,6 +447,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     @Override
     public void OnMessageReceived(@NotNull DcSctpMessage message) {
         assertFalse(pullMode);
+        messagesReceived.incrementAndGet();
         String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
         logger.info("Message received: " +
@@ -459,6 +466,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
 
             DcSctpMessage message = wrapper.socket.getNextMessage();
             assertNotNull(message);
+            messagesReceived.incrementAndGet();
             String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
             logger.info("Message received with pull: " +

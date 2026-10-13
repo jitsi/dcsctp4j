@@ -285,7 +285,7 @@ NATIVE_EPILOG_Z
 
 DcSctpMessage convertDcSctpMessage(JNIEnv* env, jDcSctpMessage jmessage)
 {
-    auto messageClass = java_classes::get<DcSctpMessage_class>();
+    auto & messageClass = java_classes::get<DcSctpMessage_class>();
 
     auto payload = messageClass.getPayload(env, jmessage);
     java_array_access aPayload(env, payload);
@@ -306,7 +306,7 @@ local_java_ref<jDcSctpMessage> convertDcSctpMessage(JNIEnv* env, const DcSctpMes
     copy(payload.begin(), payload.end(), aPayload.begin());
     aPayload.commit();
 
-    auto messageClass = java_classes::get<DcSctpMessage_class>();
+    auto & messageClass = java_classes::get<DcSctpMessage_class>();
     auto jmessage = messageClass.ctor(env, *message.stream_id(), *message.ppid(), jPayload);
 
     return jmessage;

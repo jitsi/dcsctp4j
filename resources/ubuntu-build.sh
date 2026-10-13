@@ -71,7 +71,8 @@ fi
 # distributions whose default GCC is older (Ubuntu 20.04 ships GCC 9) use the
 # versioned g++-10 packages instead; everywhere else use the default compiler.
 GXX_SUFFIX=
-if [ "$(g++ -dumpversion | cut -d. -f1)" -lt 10 ]; then
+GXX_MAJOR="$(g++ -dumpversion 2>/dev/null | cut -d. -f1)"
+if [ -z "$GXX_MAJOR" ] || [ "$GXX_MAJOR" -lt 10 ]; then
     GXX_SUFFIX=-10
 fi
 if [ -n "$TOOLCHAIN_FILE" ]; then
@@ -82,7 +83,6 @@ if [ -n "$TOOLCHAIN_FILE" ]; then
     esac
 fi
 CXX_COMPILER=/usr/bin/${CROSS_PREFIX}g++${GXX_SUFFIX}
-C_COMPILER=/usr/bin/${CROSS_PREFIX}gcc${GXX_SUFFIX}
 
 NCPU=$(nproc)
 if [ -n "$NCPU" -a "$NCPU" -gt 1 ]
@@ -114,8 +114,8 @@ else
         OBJDIR="$WEBRTC_OBJ/obj" \
         $VERBOSE_MAKE \
         $DEBUG_MAKE \
-        CXX=/usr/bin/${GNU_ARCH}-linux-gnu-g++${GXX_SUFFIX} \
-        AR=${GNU_ARCH}-linux-gnu-ar
+        CXX=$CXX_COMPILER \
+        AR=/usr/bin/${CROSS_PREFIX}ar
 fi
 
 cd $startdir
@@ -132,7 +132,6 @@ cmake -B cmake-build-linux-"$DEBARCH" \
     -DWEBRTC_DIR="$WEBRTC_DIR" \
     -DWEBRTC_OBJ="$WEBRTC_OBJ" \
     -DCMAKE_TOOLCHAIN_FILE:PATH="$TOOLCHAIN_FILE" \
-    -DCMAKE_C_COMPILER="$C_COMPILER" \
     -DCMAKE_CXX_COMPILER="$CXX_COMPILER" \
     $DEBUG_CMAKE \
     -DCMAKE_BUILD_TYPE=$DEBUG_CMAKE_BUILD_TYPE

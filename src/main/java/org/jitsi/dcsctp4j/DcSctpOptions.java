@@ -316,10 +316,9 @@ public class DcSctpOptions
     * Default value set to be same as initial congestion window. Set to zero to
     * disable.
     */
-  public native long getImmediateSackUnderCwndMtus();
+    public native long getImmediateSackUnderCwndMtus();
 
-  public native void setImmediateSackUnderCwndMtus(long immediateSackUnderCwndMtus);
-
+    public native void setImmediateSackUnderCwndMtus(long immediateSackUnderCwndMtus);
 
     /**
      * The number of packets that may be sent at once. This is limited to avoid

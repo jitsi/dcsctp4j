@@ -37,7 +37,7 @@ public interface DcSctpSocketInterface
     long messagesReady();
 
     /**
-     * To be called after `DcSctpSocketCallbacks::OnMessagesReady` has triggered
+     * To be called after {@link DcSctpSocketCallbacks#OnMessageReady} has triggered
      * to retrieve the next message, if any.
      *
      * Only used when {@link DcSctpOptions#getEnableReceivePullMode()} is true (will
