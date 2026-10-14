@@ -55,9 +55,13 @@ add_library(${PROJECT_NAME} SHARED
             src/main/native/log_proxy.cpp
             )
 
+# dcsctp uses pthread mutexes; on glibc older than 2.34 they live in libpthread.
+find_package(Threads REQUIRED)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
                       smjni::smjni
                       dcsctp
+                      Threads::Threads
                       )
 
 # Fail the link if the static dcsctp library is missing anything the wrapper needs,
