@@ -79,7 +79,14 @@ fail part way through. Before the first checkout, generate Git credentials for *
 while signed in to a Google account, at <https://webrtc.googlesource.com/new-password> and
 <https://chromium.googlesource.com/new-password>, and append the lines each page gives you to
 `~/.gitcookies` (and set `git config --global http.cookiefile ~/.gitcookies` if the page's
-snippet does not). The [WebRTC development page](https://webrtc.github.io/webrtc-org/native-code/development/#contributing-your-first-patch)
+snippet does not). On a build machine, do this as the user that runs the build (for example
+`sudo -u jenkins`), since that is whose `gclient` fetches the code; the file should be readable only
+by that user. To check, this should print 200 rather than 401:
+```
+curl -s -o /dev/null -w '%{http_code}\n' -b ~/.gitcookies \
+  'https://chromium.googlesource.com/a/chromium/src.git/info/refs?service=git-upload-pack'
+```
+The [WebRTC development page](https://webrtc.github.io/webrtc-org/native-code/development/#contributing-your-first-patch)
 describes the same requirement under "make sure you're logged in".
 
 ### macOS
