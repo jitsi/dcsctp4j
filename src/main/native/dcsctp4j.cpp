@@ -16,6 +16,7 @@
 
 #include <smjni/smjni.h>
 #include <exception>
+#include <string>
 #include "all_classes.h"
 #include <net/dcsctp/public/dcsctp_socket_factory.h>
 #include "wrapped_objects.h"
@@ -109,7 +110,14 @@ NATIVE_PROLOG
             return low;
         }
         try {
-            return static_cast<uint32_t>(operatorClass.applyAsLong(env, jGetRandomInt, low, high));
+            jlong value = operatorClass.applyAsLong(env, jGetRandomInt, low, high);
+            if (value < low || value >= high) {
+                auto ex = java_runtime::throwable().ctor(env, java_string_create(env,
+                        "getRandomInt returned " + std::to_string(value) + ", outside [" +
+                        std::to_string(low) + ", " + std::to_string(high) + ")"));
+                throw java_exception(ex);
+            }
+            return static_cast<uint32_t>(value);
         }
         catch (...) {
             pending = std::current_exception();
@@ -122,11 +130,6 @@ NATIVE_PROLOG
         std::rethrow_exception(pending);
     }
 
-    auto jToken = java_array_create<jbyte>(env, token.size());
-    auto aToken = java_array_access(env, jToken);
-    copy(token.cbegin(), token.cend(), aToken.begin());
-    aToken.commit();
-
-    return jToken.release();
+    return java_array_create<jbyte>(env, token.begin(), token.end()).release();
 NATIVE_EPILOG_Z
 }

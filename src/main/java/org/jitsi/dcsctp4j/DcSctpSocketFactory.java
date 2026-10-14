@@ -156,6 +156,8 @@ public class DcSctpSocketFactory
         @Override
         public synchronized boolean connectWithConnectionToken(byte @NotNull [] myData, byte @NotNull [] peerData)
         {
+            Objects.requireNonNull(myData, "myData");
+            Objects.requireNonNull(peerData, "peerData");
             return connectWithConnectionToken_(ptr, myData, peerData);
         }
 

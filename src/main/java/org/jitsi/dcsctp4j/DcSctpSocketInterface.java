@@ -34,7 +34,10 @@ public interface DcSctpSocketInterface
      * Only used when {@link DcSctpOptions#getEnableReceivePullMode()} is true (will
      * always return zero if not enabled).
      */
-    long messagesReady();
+    default long messagesReady()
+    {
+        return 0;
+    }
 
     /**
      * To be called after {@link DcSctpSocketCallbacks#OnMessageReady} has triggered
@@ -44,7 +47,10 @@ public interface DcSctpSocketInterface
      * always return empty if not enabled).
      */
     @Nullable
-    DcSctpMessage getNextMessage();
+    default DcSctpMessage getNextMessage()
+    {
+        return null;
+    }
 
     /** To be called when a timeout has expired. The timeoutId is provided
      when the timeout was initiated. */
@@ -62,11 +68,12 @@ public interface DcSctpSocketInterface
      * {@link DcSctpSocketFactory#generateConnectionToken}, and {@code peerData} is the
      * token the peer generated and exchanged out of band.
      *
-     * Implementations that do not support the out-of-band sequence return {@code false}.
+     * Implementations that do not support the out-of-band sequence throw
+     * {@link UnsupportedOperationException}, so that it cannot be mistaken for a rejected token.
      */
     default boolean connectWithConnectionToken(byte @NotNull [] myData, byte @NotNull [] peerData)
     {
-        return false;
+        throw new UnsupportedOperationException("out-of-band connection is not supported");
     }
 
     /* *

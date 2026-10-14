@@ -44,10 +44,7 @@ void WrappedPacketObserver::OnSentPacket(TimeMs now, std::span<const uint8_t> pa
 
     auto javaObserver = getObj(env);
     
-    auto jPayload = java_array_create<jbyte>(env, payload.size());
-    auto aPayload = java_array_access(env, jPayload);
-    copy(payload.begin(), payload.end(), aPayload.begin());
-    aPayload.commit();
+    auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
 
     packetObserverClass.OnSentPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
 }
@@ -58,10 +55,7 @@ void WrappedPacketObserver::OnReceivedPacket(TimeMs now, std::span<const uint8_t
 
     auto javaObserver = getObj(env);
     
-    auto jPayload = java_array_create<jbyte>(env, payload.size());
-    auto aPayload = java_array_access(env, jPayload);
-    copy(payload.begin(), payload.end(), aPayload.begin());
-    aPayload.commit();
+    auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
 
     packetObserverClass.OnReceivedPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
 }
@@ -128,10 +122,7 @@ SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
 
     auto socketCallbacks = getObj(env);
 
-    auto jData = java_array_create<jbyte>(env, data.size());
-    auto aData = java_array_access(env, jData);
-    copy(data.begin(), data.end(), aData.begin());
-    aData.commit();
+    auto jData = java_array_create<jbyte>(env, data.begin(), data.end());
 
     jint status = socketCallbacksClass.sendPacketWithStatus_(env, socketCallbacks, jData.c_ptr());
 
@@ -183,10 +174,7 @@ void WrappedSocketCallbacks::OnMessageReceived(DcSctpMessage message)
     auto socketCallbacks = getObj(env);
 
     auto payload = message.payload();
-    auto jPayload = java_array_create<jbyte>(env, payload.size());
-    auto aPayload = java_array_access(env, jPayload);
-    copy(payload.begin(), payload.end(), aPayload.begin());
-    aPayload.commit();
+    auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
 
     socketCallbacksClass.OnMessageReceived_(env, socketCallbacks, jPayload.c_ptr(), *message.ppid(), *message.stream_id());
 }

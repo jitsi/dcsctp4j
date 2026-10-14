@@ -71,6 +71,17 @@ $ resources/ubuntu-build-all.sh ~/DepotTools ~/WebRTC
 latter of these is quite large, so if this is your first checkout make sure
 you have enough disk space and be prepared to wait for some time.
 
+#### Logging in to Google's Git servers
+
+Anonymous access to `webrtc.googlesource.com` and `chromium.googlesource.com` is rate limited
+and in practice several times slower than authenticated access; a large anonymous sync can also
+fail part way through. Before the first checkout, generate Git credentials for **both** hosts
+while signed in to a Google account, at <https://webrtc.googlesource.com/new-password> and
+<https://chromium.googlesource.com/new-password>, and append the lines each page gives you to
+`~/.gitcookies` (and set `git config --global http.cookiefile ~/.gitcookies` if the page's
+snippet does not). The [WebRTC development page](https://webrtc.github.io/webrtc-org/native-code/development/#contributing-your-first-patch)
+describes the same requirement under "make sure you're logged in".
+
 ### macOS
 - OpenJDK 11 (or newer)
 - XCode

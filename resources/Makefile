@@ -15,7 +15,11 @@ DEBUG ?= -O2
 # Omitted: the target and sysroot (passed in through CXX), -msse3 and other
 # x64-specific options, the Chromium clang plugin, and build-specific defines
 # such as CR_CLANG_REVISION and CR_SYSROOT_KEY.
-CXXFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS -D_FORTIFY_SOURCE=3
+CXXFLAGS += -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS
+# glibc warns, and -Werror fails, if _FORTIFY_SOURCE is set without optimisation.
+ifneq ($(DEBUG),-O0)
+CXXFLAGS += -D_FORTIFY_SOURCE=3
+endif
 CXXFLAGS += -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE
 CXXFLAGS += -D_GNU_SOURCE -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE
 CXXFLAGS += -D_GLIBCXX_ASSERTIONS=1
@@ -45,13 +49,11 @@ CXXFLAGS += -fno-delete-null-pointer-checks -fno-strict-overflow -fno-ident
 CXXFLAGS += -fno-math-errno -fno-strict-aliasing -fstack-protector
 CXXFLAGS += -funwind-tables -fPIC -pthread
 CXXFLAGS += -fmerge-all-constants
-CXXFLAGS += -mllvm -instcombine-lower-dbg-declare=0
-CXXFLAGS += -mllvm -split-threshold-for-reg-with-hint=0
 CXXFLAGS += -ffp-contract=off -Wno-builtin-macro-redefined
 CXXFLAGS += -D__DATE__= -D__TIME__= -D__TIMESTAMP__= -no-canonical-prefixes
 CXXFLAGS += -ftrivial-auto-var-init=pattern $(DEBUG) -fdata-sections
 CXXFLAGS += -ffunction-sections -fno-unique-section-names -fno-omit-frame-pointer
-CXXFLAGS += -gdwarf-4 -g2 -gdwarf-aranges -gno-pubnames -Xclang -fuse-ctor-homing
+CXXFLAGS += -gdwarf-4 -g2 -gdwarf-aranges -gno-pubnames
 CXXFLAGS += -fsanitize=array-bounds -fsanitize-trap=array-bounds
 CXXFLAGS += -Wno-unsafe-buffer-usage-in-static-sized-array
 CXXFLAGS += -fsanitize=return -fsanitize-trap=return
@@ -72,7 +74,10 @@ CXXFLAGS += -Wno-unknown-warning-option
 TOT_CLANG_FLAGS = -fdiagnostics-show-inlining-chain -fno-lifetime-dse \
     -fsanitize-ignore-for-ubsan-feature=array-bounds \
     -fsanitize-ignore-for-ubsan-feature=return \
-    -fsanitize-ignore-for-ubsan-feature=unreachable
+    -fsanitize-ignore-for-ubsan-feature=unreachable \
+    -mllvm -instcombine-lower-dbg-declare=0 \
+    -mllvm -split-threshold-for-reg-with-hint=0 \
+    -Xclang -fuse-ctor-homing
 ifeq ($(shell $(CXX) $(TOT_CLANG_FLAGS) -fsyntax-only -x c++ /dev/null >/dev/null 2>&1 && echo yes),yes)
 CXXFLAGS += $(TOT_CLANG_FLAGS)
 endif

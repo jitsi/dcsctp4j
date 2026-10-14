@@ -71,6 +71,8 @@ fi
 # distribution's compiler and glibc therefore do not affect the result: the
 # libraries require the sysroot's glibc and libstdc++ (Debian bullseye) at most.
 WEBRTC_CLANG_BIN=third_party/llvm-build/Release+Asserts/bin
+# The Debian release of WebRTC's sysroots (see build/linux/sysroot_scripts/sysroots.json).
+SYSROOT_RELEASE=bullseye
 
 NCPU=$(nproc)
 if [ -n "$NCPU" -a "$NCPU" -gt 1 ]
@@ -81,6 +83,14 @@ fi
 if test \! -d $WEBRTC_DIR/.git -a -r $WEBRTC_DIR/.gclient -a -d $WEBRTC_DIR/src/.git; then
     # They specified the WebRTC gclient directory, not the src checkout subdirectory
     WEBRTC_DIR=$WEBRTC_DIR/src
+fi
+# The compiler, sysroot and object paths derived from it are used from other directories.
+WEBRTC_DIR=$(cd "$WEBRTC_DIR" && pwd)
+
+if [ "$(uname -m)" != "x86_64" ]; then
+    echo "ERROR: the Linux build needs an x86-64 host: WebRTC's clang is only shipped as an x86-64 binary." >&2
+    echo "On other hosts, build libdcsctp with resources/Makefile and a native clang; see README.md." >&2
+    exit 1
 fi
 
 WEBRTC_BUILD=out/linux-$GN_ARCH
@@ -93,7 +103,7 @@ startdir=$PWD
 cd $WEBRTC_DIR
 rm -rf $WEBRTC_BUILD
 ./build/linux/sysroot_scripts/install-sysroot.py --arch=$SYSROOT_ARCH
-WEBRTC_SYSROOT=$WEBRTC_DIR/build/linux/debian_bullseye_${SYSROOT_ARCH}-sysroot
+WEBRTC_SYSROOT=$WEBRTC_DIR/build/linux/debian_${SYSROOT_RELEASE}_${SYSROOT_ARCH}-sysroot
 if test "$USE_MAKEFILE" != "BUILD_DCSCTP_WITH_MAKEFILE"; then
     gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2 use_lld=false"
     ninja $VERBOSE_NINJA -C $WEBRTC_BUILD dcsctp

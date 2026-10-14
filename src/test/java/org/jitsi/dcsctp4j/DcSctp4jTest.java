@@ -232,7 +232,9 @@ public class DcSctp4jTest {
         // Use stream 3 so that it exists on both sides before resetting it.
         DcSctpMessage message = new DcSctpMessage((short) 3, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         client.socket.send(message, new SendOptions());
-        sleep(100);
+        // The reset is only performed, not deferred, once the message has been delivered and acked.
+        waitUntil(() -> serverCallbacks.messagesReceived.get() > 0 && client.socket.bufferedAmount((short) 3) == 0, 2000);
+        sleep(50);
 
         ResetStreamsStatus status = client.socket.resetStreams(Collections.singletonList((short) 3));
         assertEquals(ResetStreamsStatus.kPerformed, status);
@@ -469,15 +471,18 @@ class TestCallbacks implements DcSctpSocketCallbacks {
             assertTrue(messagesReady > 0);
             logger.info(messagesReady + " messages ready");
 
-            DcSctpMessage message = wrapper.socket.getNextMessage();
-            assertNotNull(message);
-            messagesReceived.incrementAndGet();
-            String s = new String(message.getPayload(), StandardCharsets.UTF_8);
+            // One OnMessageReady may announce several messages; drain the queue.
+            DcSctpMessage message;
+            while ((message = wrapper.socket.getNextMessage()) != null) {
+                messagesReceived.incrementAndGet();
+                String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
-            logger.info("Message received with pull: " +
-                    "streamID " + message.getStreamID() +
-                    ", PPID " + message.getPpid() +
-                    ", payload " + s);
+                logger.info("Message received with pull: " +
+                        "streamID " + message.getStreamID() +
+                        ", PPID " + message.getPpid() +
+                        ", payload " + s);
+            }
+            assertEquals(0, wrapper.socket.messagesReady());
         } catch (Throwable e) {
             failed = true;
             logger.error("Error processing OnMessageReady", e);
