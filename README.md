@@ -42,6 +42,14 @@ checkout provides, against WebRTC's Debian sysroots. The host's own compiler is 
 host distribution does not affect what glibc and libstdc++ the libraries require at runtime
 (Debian bullseye, or Ubuntu 20.04, and newer).
 
+**The Linux build requires an x86-64 host.** WebRTC only ships its clang, and several of the
+tools `gclient` installs, as x86-64 Linux binaries. On an arm64 or ppc64le host those are not
+available, and WebRTC's gn build files also pass flags that only its own clang understands, so a
+distribution clang cannot drive the gn build either. A non-x86 host can still build its own
+architecture with `resources/Makefile` and a native clang pointed at the matching WebRTC
+sysroot, which is the path ppc64le uses on x86 hosts too; see the Makefile for the variables it
+takes. Running the x86-64 clang under `qemu-user` is not an option: it miscompiles.
+
 * Clone the project
 * Update the SimpleJNI subproject with
 ```
