@@ -42,6 +42,9 @@ CXXFLAGS += -fvisibility-inlines-hidden -Wnon-virtual-dtor -Woverloaded-virtual
 CXXFLAGS += -Wno-return-type -Wno-overloaded-virtual -Wno-comment -Wno-undef
 CXXFLAGS += -Wno-redundant-move
 CXXFLAGS += -Wno-unknown-warning-option
+# WebRTC's own build disables these clang warnings; its headers trip them under -Werror.
+CXXFLAGS += -Wno-nullability-completeness -Wno-thread-safety-reference-return
+CXXFLAGS += -Wno-nontrivial-memcall -Wno-unused-but-set-global
 # gn defines the target architecture for WebRTC; derive it from the compiler here.
 ifneq ($(shell $(CXX) -dM -E - </dev/null | grep -c __aarch64__),0)
 CXXFLAGS += -DWEBRTC_ARCH_ARM64 -DWEBRTC_HAS_NEON
