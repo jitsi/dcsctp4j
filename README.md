@@ -82,8 +82,7 @@ shell (do not paste it into a file). It creates `~/.gitcookies` if needed, point
 `git config --global http.cookiefile` at it, and appends that host's cookie line. On a build
 machine, run the scripts as the user that runs the build (for example `sudo -u jenkins -i`), since
 that is whose `gclient` fetches the code; the file should be readable only by that user. To check,
-this should print 200 rather than 401 (the `/a/` prefix forces authentication; asking for a single
-ref keeps the response tiny):
+this should print 200 rather than 401:
 ```
 curl -s -o /dev/null -w '%{http_code}\n' -b ~/.gitcookies \
   'https://chromium.googlesource.com/a/chromium/src/+refs/heads/main?format=TEXT'
