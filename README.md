@@ -82,10 +82,11 @@ shell (do not paste it into a file). It creates `~/.gitcookies` if needed, point
 `git config --global http.cookiefile` at it, and appends that host's cookie line. On a build
 machine, run the scripts as the user that runs the build (for example `sudo -u jenkins -i`), since
 that is whose `gclient` fetches the code; the file should be readable only by that user. To check,
-this should print 200 rather than 401:
+this should print 200 rather than 401 (the `/a/` prefix forces authentication; asking for a single
+ref keeps the response tiny):
 ```
 curl -s -o /dev/null -w '%{http_code}\n' -b ~/.gitcookies \
-  'https://chromium.googlesource.com/a/chromium/src.git/info/refs?service=git-upload-pack'
+  'https://chromium.googlesource.com/a/chromium/src/+refs/heads/main?format=TEXT'
 ```
 The [WebRTC development page](https://webrtc.github.io/webrtc-org/native-code/development/#contributing-your-first-patch)
 describes the same requirement under "make sure you're logged in".
