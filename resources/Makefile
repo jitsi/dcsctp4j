@@ -51,7 +51,7 @@ CXXFLAGS += -ffp-contract=off -Wno-builtin-macro-redefined
 CXXFLAGS += -D__DATE__= -D__TIME__= -D__TIMESTAMP__= -no-canonical-prefixes
 CXXFLAGS += -ftrivial-auto-var-init=pattern $(DEBUG) -fdata-sections
 CXXFLAGS += -ffunction-sections -fno-unique-section-names -fno-omit-frame-pointer
-CXXFLAGS += -gdwarf-4 -g2 -gdwarf-aranges -gno-pubnames -fuse-ctor-homing
+CXXFLAGS += -gdwarf-4 -g2 -gdwarf-aranges -gno-pubnames -Xclang -fuse-ctor-homing
 CXXFLAGS += -fsanitize=array-bounds -fsanitize-trap=array-bounds
 CXXFLAGS += -fsanitize-ignore-for-ubsan-feature=array-bounds
 CXXFLAGS += -Wno-unsafe-buffer-usage-in-static-sized-array
