@@ -35,10 +35,12 @@ Prerequisites:
 - Maven
 - CMake
 - Git
-- APT packages `build-essential`, `g++-aarch64-linux-gnu`, `g++-powerpc64le-linux-gnu` and their dependencies
-- GCC 10 or newer, because WebRTC's headers require C++20. On Ubuntu 20.04, whose default GCC is 9,
-  install `g++-10`, `g++-10-aarch64-linux-gnu` and `g++-10-powerpc64le-linux-gnu`; the build scripts
-  pick the versioned compilers automatically when the default `g++` is too old.
+- APT package `build-essential` (for `make` and the tools WebRTC's build expects on the host)
+
+The Linux libraries, for all three architectures, are compiled with the clang that the WebRTC
+checkout provides, against WebRTC's Debian sysroots. The host's own compiler is not used, so the
+host distribution does not affect what glibc and libstdc++ the libraries require at runtime
+(Debian bullseye, or Ubuntu 20.04, and newer).
 
 * Clone the project
 * Update the SimpleJNI subproject with

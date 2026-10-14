@@ -16,9 +16,10 @@
 
 /*
  * The natives that marshal Java arrays into dcsctp calls live in this file rather
- * than in native_sctp_socket.cpp because GCC 10's aarch64 cross compiler (Ubuntu
- * 20.04) crashes with an internal compiler error when they are compiled in the same
- * translation unit as the rest of that file. GCC 11 and later do not have the problem.
+ * than in native_sctp_socket.cpp because GCC 10's aarch64 cross compiler crashes
+ * with an internal compiler error when they are compiled in the same translation
+ * unit as the rest of that file. The Linux build no longer uses GCC, but the split
+ * is harmless and keeps the sources buildable with it.
  */
 
 #include <smjni/smjni.h>

@@ -46,8 +46,6 @@ CXXFLAGS += -Wno-unknown-warning-option
 ifneq ($(shell $(CXX) -dM -E - </dev/null | grep -c __aarch64__),0)
 CXXFLAGS += -DWEBRTC_ARCH_ARM64 -DWEBRTC_HAS_NEON
 endif
-# GCC 10 at -O2 reports a false -Wmaybe-uninitialized in rtc_base/logging.cc.
-CXXFLAGS += -Wno-maybe-uninitialized
 # Add include paths to fix compilation errors due to missing headers.
 CXXFLAGS += -I$(S)
 CXXFLAGS += -I$(S)/third_party/abseil-cpp
