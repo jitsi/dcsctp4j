@@ -52,7 +52,7 @@ SOCKET_PROLOG(ptr)
     transform(statuses.cbegin(), statuses.cend(), statusArrayAccess.begin(), [](auto e) { return (int)e; });
     statusArrayAccess.commit();
     return statusArray.release();
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 jResetStreamsStatus JNICALL DcSctpSocketFactory_NativeSctpSocket_class::resetStreams_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshortArray outgoingStreams)
@@ -67,5 +67,5 @@ SOCKET_PROLOG(ptr)
     auto status = nativeSocket->socket->ResetStreams(vstreams);
 
     return enum_members::get<ResetStreamsStatus_members>().map(env, status);
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }

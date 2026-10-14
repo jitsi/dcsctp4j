@@ -123,7 +123,7 @@ public class DcSctp4jTest {
 
         assertTrue(pair.clientCallbacks.failed, "the server's receivePacket should have thrown");
         assertSame(boom, pair.clientCallbacks.lastError);
-        assertEquals(0, pair.serverCallbacks.messagesReceived.get());
+        assertEquals(0, pair.serverCallbacks.messagesReceived.size());
         // dcsctp itself is intact on both sides.
         assertEquals(SocketState.kConnected, pair.server.socket.state());
         assertEquals(SocketState.kConnected, pair.client.socket.state());
@@ -448,8 +448,6 @@ public class DcSctp4jTest {
         test.testConnectWithConnectionToken();
         System.out.println("Running testGenerateConnectionTokenCallbackFailures");
         test.testGenerateConnectionTokenCallbackFailures();
-        /* System.out.println("Testing testExceptionThroughJNI");
-        test.testExceptionThroughJNI(); */
         DcSctp4jTest.executor.shutdown();
     }
 }
@@ -479,11 +477,7 @@ class TestTimeout implements Timeout, Runnable {
 
     @Override
     public void stop() {
-        // dcsctp may stop a timeout it believes it started, even if start() was never
-        // delivered to Java (e.g. because an earlier callback threw).
-        if (future != null) {
-            future.cancel(false);
-        }
+        future.cancel(false);
     }
 
     @Override

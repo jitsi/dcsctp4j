@@ -89,8 +89,9 @@ NATIVE_PROLOG
 
     nativeSocket->socket = factory->Create(logPrefix, nativeSocket->callbacks, std::move(packetObserver), *options);
 
-    /* Create() already calls back into Java (CreateTimeout). Rethrow before releasing
-       ownership, so a failed construction frees the socket. */
+    /* Create() already calls back into Java (CreateTimeout). Rethrow explicitly rather
+       than through a PendingExceptionGuard: the guard would fire during the return,
+       after release() has given up ownership, and the socket would leak. */
     nativeSocket->exceptions.rethrow();
 
     return (jlong)(intptr_t)nativeSocket.release();
@@ -109,6 +110,7 @@ NATIVE_PROLOG
        As with the socket callbacks, an exception from Java must not unwind through dcsctp. The
        range of the result is validated by the Java wrapper, DcSctpSocketFactory.generateConnectionToken. */
     CallbackExceptionSink exceptions;
+    PendingExceptionGuard pendingExceptionGuard(exceptions);
     auto getRandomInt = [&](uint32_t low, uint32_t high) -> uint32_t {
         return exceptions.call([&]() -> uint32_t {
             return static_cast<uint32_t>(operatorClass.applyAsLong(env, jGetRandomInt, low, high));
@@ -116,7 +118,6 @@ NATIVE_PROLOG
     };
 
     vector<uint8_t> token = factory->GenerateConnectionToken(*options, getRandomInt);
-    exceptions.rethrow();
 
     return java_array_create<jbyte>(env, token.begin(), token.end()).release();
 NATIVE_EPILOG_Z

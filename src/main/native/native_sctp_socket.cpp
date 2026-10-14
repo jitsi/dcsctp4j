@@ -33,8 +33,12 @@ NativeSctpSocket::NativeSctpSocket(jDcSctpSocketCallbacks jCallbacks) :
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::destruct(JNIEnv *env, jclass, jlong ptr)
 {
 NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
-    delete nativeSocket;
+    std::unique_ptr<NativeSctpSocket> nativeSocket((NativeSctpSocket*)(intptr_t)ptr);
+    /* Destroying the dcsctp socket stops its timers, which calls back into Java. Tear
+       it down first so that an exception from those callbacks is reported rather than
+       destroyed along with the sink; the unique_ptr frees the rest either way. */
+    nativeSocket->socket.reset();
+    nativeSocket->exceptions.rethrow();
 NATIVE_EPILOG
 }
 
@@ -55,14 +59,14 @@ SOCKET_PROLOG(ptr)
     auto dataView = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(aData.data()) + offset,
                                              static_cast<size_t>(length));
     nativeSocket->socket->ReceivePacket(dataView);
-SOCKET_EPILOG
+NATIVE_EPILOG
 }
 
 jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::messagesReady_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
 SOCKET_PROLOG(ptr)
     return nativeSocket->socket->MessagesReady();
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 jDcSctpMessage JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getNextMessage_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
@@ -74,21 +78,21 @@ SOCKET_PROLOG(ptr)
     }
 
     return convertDcSctpMessage(env, *msg).release();
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::handleTimeout_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jlong timeoutId)
 {
 SOCKET_PROLOG(ptr)
     nativeSocket->socket->HandleTimeout(TimeoutID(timeoutId));
-SOCKET_EPILOG
+NATIVE_EPILOG
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::connect_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
 SOCKET_PROLOG(ptr)
     nativeSocket->socket->Connect();
-SOCKET_EPILOG
+NATIVE_EPILOG
 }
 
 jboolean JNICALL DcSctpSocketFactory_NativeSctpSocket_class::connectWithConnectionToken_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray myData, jbyteArray peerData)
@@ -100,21 +104,21 @@ SOCKET_PROLOG(ptr)
     auto mySpan = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(aMyData.data()), aMyData.size());
     auto peerSpan = std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(aPeerData.data()), aPeerData.size());
     return nativeSocket->socket->ConnectWithConnectionToken(mySpan, peerSpan) ? java_true : java_false;
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::shutdown_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
 SOCKET_PROLOG(ptr)
     nativeSocket->socket->Shutdown();
-SOCKET_EPILOG
+NATIVE_EPILOG
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::close_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
 SOCKET_PROLOG(ptr)
     nativeSocket->socket->Close();
-SOCKET_EPILOG
+NATIVE_EPILOG
 }
 
 jSocketState JNICALL DcSctpSocketFactory_NativeSctpSocket_class::state_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
@@ -122,7 +126,7 @@ jSocketState JNICALL DcSctpSocketFactory_NativeSctpSocket_class::state_(JNIEnv* 
 SOCKET_PROLOG(ptr)
     auto status = nativeSocket->socket->state();
     return enum_members::get<SocketState_members>().map(env, status);
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 jDcSctpOptions JNICALL DcSctpSocketFactory_NativeSctpSocket_class::options_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
@@ -131,21 +135,21 @@ SOCKET_PROLOG(ptr)
     auto options = make_unique<DcSctpOptions>(nativeSocket->socket->options());
     auto jOptions = java_classes::get<DcSctpOptions_class>().ctor(env, (jlong)(intptr_t)options.release());
     return jOptions.release();
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::setStreamPriority_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId, jshort streamPriority)
 {
 SOCKET_PROLOG(ptr)
     nativeSocket->socket->SetStreamPriority(StreamID(streamId), StreamPriority(streamPriority));
-SOCKET_EPILOG
+NATIVE_EPILOG
 }
 
 jshort JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getStreamPriority_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId)
 {
 SOCKET_PROLOG(ptr)
     return *nativeSocket->socket->GetStreamPriority(StreamID(streamId));
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 jint JNICALL DcSctpSocketFactory_NativeSctpSocket_class::send_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray payload, jint ppid, jshort streamID, jboolean isUnordered, jLong lifetime, jLong maxRetransmissions, jlong lifecycleId)
@@ -171,7 +175,7 @@ SOCKET_PROLOG(ptr)
     options.lifecycle_id = LifecycleId(lifecycleId);
 
     return (jint)nativeSocket->socket->Send(std::move(message), options);
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::bufferedAmount_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId)
@@ -179,7 +183,7 @@ jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::bufferedAmount_(JNIEnv
 SOCKET_PROLOG(ptr)
 
     return nativeSocket->socket->buffered_amount(StreamID(streamId));
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::bufferedAmountLowThreshold_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId)
@@ -187,7 +191,7 @@ jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::bufferedAmountLowThres
 SOCKET_PROLOG(ptr)
 
     return nativeSocket->socket->buffered_amount_low_threshold(StreamID(streamId));
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::setBufferedAmountLowThreshold_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId, jlong bytes)
@@ -195,7 +199,7 @@ void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::setBufferedAmountLowThr
 SOCKET_PROLOG(ptr)
 
     nativeSocket->socket->SetBufferedAmountLowThreshold(StreamID(streamId), bytes);
-SOCKET_EPILOG
+NATIVE_EPILOG
 }
 
 jMetrics JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getMetrics_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
@@ -208,7 +212,7 @@ SOCKET_PROLOG(ptr)
     }
     auto metricsP = make_unique<Metrics>(*metrics);
     return java_classes::get<Metrics_class>().ctor(env, (jlong)(intptr_t)metricsP.release()).release();
-SOCKET_EPILOG_Z
+NATIVE_EPILOG_Z
 }
 
 DcSctpMessage convertDcSctpMessage(JNIEnv* env, jDcSctpMessage jmessage)

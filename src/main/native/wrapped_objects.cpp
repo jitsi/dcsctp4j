@@ -79,22 +79,33 @@ void WrappedTimeout::Start(DurationMs duration, TimeoutID timeout_id)
         JNIEnv* env = jni_provider::get_jni();
 
         timeoutClass.start(env, timeout, *duration, *timeout_id);
+        started = true;
     });
 }
 
 
 void WrappedTimeout::Stop()
 {
+    /* If start() never reached Java (suppressed after an earlier callback threw),
+       don't deliver an unpaired stop(). */
+    if (!started) {
+        return;
+    }
     exceptions.call([&] {
         JNIEnv* env = jni_provider::get_jni();
 
         timeoutClass.stop(env, timeout);
+        started = false;
     });
 }
 
 
 void WrappedTimeout::Restart(DurationMs duration, TimeoutID timeout_id)
 {
+    if (!started) {
+        Start(duration, timeout_id);
+        return;
+    }
     exceptions.call([&] {
         JNIEnv* env = jni_provider::get_jni();
 
@@ -109,6 +120,9 @@ WrappedSocketCallbacks::WrappedSocketCallbacks(jDcSctpSocketCallbacks callbacks,
     wSocketCallbacks(jweak_ref(callbacks)),
     exceptions(exceptions_)
 {
+    /* Seed the fallback for Now() with a real time, so that an exception from the
+       very first callback does not leave the library seeing the epoch. */
+    Now();
 }
 
 local_java_ref<jDcSctpSocketCallbacks> WrappedSocketCallbacks::getObj(JNIEnv *env)

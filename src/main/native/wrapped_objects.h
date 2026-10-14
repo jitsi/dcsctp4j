@@ -64,7 +64,8 @@ public:
         callOr(std::forward<Body>(body), [] {});
     }
 
-    bool pending() const { return static_cast<bool>(pending_); }
+    /* Drops the pending exception, if any, without rethrowing it. */
+    void discard() { pending_ = nullptr; }
 
     /* Rethrows and clears the pending exception, if any. */
     void rethrow()
@@ -165,6 +166,9 @@ private:
     Timeout_class timeoutClass;
     smjni::global_java_ref<jTimeout> timeout;
     CallbackExceptionSink& exceptions;
+    /* Whether a start() has been delivered to Java, so that stop() and restart()
+       honour Timeout's promise that they only follow a start(). */
+    bool started = false;
 };
 
 /* Handed to dcsctp when the Java createTimeout callback failed: it never fires. */

@@ -40,15 +40,19 @@ struct NativeSctpSocket {
  */
 class PendingExceptionGuard {
 public:
-    explicit PendingExceptionGuard(NativeSctpSocket* socket) :
-        socket_(socket), uncaughtAtEntry_(std::uncaught_exceptions()) {}
+    explicit PendingExceptionGuard(CallbackExceptionSink& exceptions) :
+        exceptions_(exceptions), uncaughtAtEntry_(std::uncaught_exceptions()) {}
 
     ~PendingExceptionGuard() noexcept(false)
     {
-        /* If the entry point is already unwinding (SimpleJNI threw a java_exception
-           directly), that exception wins; throwing here would terminate. */
         if (std::uncaught_exceptions() == uncaughtAtEntry_) {
-            socket_->exceptions.rethrow();
+            exceptions_.rethrow();
+        }
+        else {
+            /* The entry point is already unwinding (SimpleJNI threw a java_exception
+               directly): that exception wins, and throwing here would terminate. Drop
+               the callback's exception rather than let it leak into the next call. */
+            exceptions_.discard();
         }
     }
 
@@ -56,21 +60,19 @@ public:
     PendingExceptionGuard& operator=(const PendingExceptionGuard&) = delete;
 
 private:
-    NativeSctpSocket* socket_;
+    CallbackExceptionSink& exceptions_;
     int uncaughtAtEntry_;
 };
 
 /*
- * Prolog and epilog for native entry points that operate on a NativeSctpSocket.
- * SOCKET_PROLOG(ptr) opens the NATIVE_PROLOG try block, declares `nativeSocket`
- * (the NativeSctpSocket* that `ptr` refers to) for use by the body, and arms a
- * PendingExceptionGuard for it. SOCKET_EPILOG is NATIVE_EPILOG.
+ * Prolog for native entry points that operate on a NativeSctpSocket: opens the
+ * NATIVE_PROLOG try block, declares `nativeSocket` (the NativeSctpSocket* that `ptr`
+ * refers to) for use by the body, and arms a PendingExceptionGuard on its exception
+ * sink. Pair it with the usual NATIVE_EPILOG / NATIVE_EPILOG_Z.
  */
 #define SOCKET_PROLOG(ptr) NATIVE_PROLOG \
     auto nativeSocket = (NativeSctpSocket*)(intptr_t)(ptr); \
-    PendingExceptionGuard pendingExceptionGuard(nativeSocket);
-#define SOCKET_EPILOG    NATIVE_EPILOG
-#define SOCKET_EPILOG_Z  NATIVE_EPILOG_Z
+    PendingExceptionGuard pendingExceptionGuard(nativeSocket->exceptions);
 
 dcsctp::DcSctpMessage convertDcSctpMessage(JNIEnv* env, jDcSctpMessage jMessage);
 dcsctp::SendOptions convertSendOptions(JNIEnv* env, jSendOptions jOptions);
