@@ -94,9 +94,6 @@ CXXFLAGS += -I$(S)/third_party/abseil-cpp
 TESTS = $(shell find $(S)/net/dcsctp -name "*_test*.cc")
 SOURCES = $(shell find $(S)/net/dcsctp -name "*.cc")
 OBJECTS = $(patsubst %.cc,%.o,$(filter-out $(TESTS),$(SOURCES)))
-# Assume all source files are in subdirectories and subsubdirectories of
-# webrtc/src.
-DIRS = $(shell find $(S) -maxdepth 6 -type d -print)
 # Add other objects required to fix libdcsctp4j.so errors; first compilation
 # errors, then undefined symbol errors reported at runtime by the dynamic
 # linker.
@@ -127,7 +124,8 @@ ifeq ($(strip $(OBJDIR)),)
 $(error "Set OBJDIR to absolute path in which to store output objects")
 endif
 OBJECTS := $(addprefix $(OBJDIR)/,$(OBJECTS))
-OBJDIRS := $(addprefix $(OBJDIR)/,$(DIRS))
+# The output directories are exactly those of the objects.
+OBJDIRS := $(sort $(dir $(OBJECTS)))
 ifneq ($(strip $(VERBOSE)),1)
 SILENT := @
 endif
