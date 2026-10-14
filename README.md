@@ -77,11 +77,12 @@ Anonymous access to `webrtc.googlesource.com` and `chromium.googlesource.com` is
 and in practice several times slower than authenticated access; a large anonymous sync can also
 fail part way through. Before the first checkout, generate Git credentials for **both** hosts
 while signed in to a Google account, at <https://webrtc.googlesource.com/new-password> and
-<https://chromium.googlesource.com/new-password>, and append the lines each page gives you to
-`~/.gitcookies` (and set `git config --global http.cookiefile ~/.gitcookies` if the page's
-snippet does not). On a build machine, do this as the user that runs the build (for example
-`sudo -u jenkins`), since that is whose `gclient` fetches the code; the file should be readable only
-by that user. To check, this should print 200 rather than 401:
+<https://chromium.googlesource.com/new-password>. Each page shows a short shell script; run it in a
+shell (do not paste it into a file). It creates `~/.gitcookies` if needed, points
+`git config --global http.cookiefile` at it, and appends that host's cookie line. On a build
+machine, run the scripts as the user that runs the build (for example `sudo -u jenkins -i`), since
+that is whose `gclient` fetches the code; the file should be readable only by that user. To check,
+this should print 200 rather than 401:
 ```
 curl -s -o /dev/null -w '%{http_code}\n' -b ~/.gitcookies \
   'https://chromium.googlesource.com/a/chromium/src.git/info/refs?service=git-upload-pack'
