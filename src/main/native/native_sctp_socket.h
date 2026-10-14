@@ -60,7 +60,12 @@ private:
     int uncaughtAtEntry_;
 };
 
-/* Prolog and epilog for native entry points that operate on a NativeSctpSocket. */
+/*
+ * Prolog and epilog for native entry points that operate on a NativeSctpSocket.
+ * SOCKET_PROLOG(ptr) opens the NATIVE_PROLOG try block, declares `nativeSocket`
+ * (the NativeSctpSocket* that `ptr` refers to) for use by the body, and arms a
+ * PendingExceptionGuard for it. SOCKET_EPILOG is NATIVE_EPILOG.
+ */
 #define SOCKET_PROLOG(ptr) NATIVE_PROLOG \
     auto nativeSocket = (NativeSctpSocket*)(intptr_t)(ptr); \
     PendingExceptionGuard pendingExceptionGuard(nativeSocket);
