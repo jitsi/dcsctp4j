@@ -35,8 +35,7 @@ using namespace std;
 
 jintArray JNICALL DcSctpSocketFactory_NativeSctpSocket_class::sendMany_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jDcSctpMessageArray messages, jSendOptions joptions)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
 
     java_array_access jmessages(env, messages);
     auto vmessages = vector<DcSctpMessage>();
@@ -53,13 +52,12 @@ NATIVE_PROLOG
     transform(statuses.cbegin(), statuses.cend(), statusArrayAccess.begin(), [](auto e) { return (int)e; });
     statusArrayAccess.commit();
     return statusArray.release();
-NATIVE_EPILOG_Z
+SOCKET_EPILOG_Z
 }
 
 jResetStreamsStatus JNICALL DcSctpSocketFactory_NativeSctpSocket_class::resetStreams_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshortArray outgoingStreams)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     java_array_access jstreams(env, outgoingStreams);
     auto vstreams = vector<StreamID>();
     vstreams.reserve(jstreams.size());
@@ -69,5 +67,5 @@ NATIVE_PROLOG
     auto status = nativeSocket->socket->ResetStreams(vstreams);
 
     return enum_members::get<ResetStreamsStatus_members>().map(env, status);
-NATIVE_EPILOG_Z
+SOCKET_EPILOG_Z
 }

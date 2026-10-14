@@ -21,9 +21,10 @@ using namespace smjni;
 using namespace dcsctp;
 using namespace std;
 
-WrappedPacketObserver::WrappedPacketObserver(jPacketObserver observer) :
+WrappedPacketObserver::WrappedPacketObserver(jPacketObserver observer, CallbackExceptionSink& exceptions_) :
     packetObserverClass(java_classes::get<PacketObserver_class>()),
-    wJavaObserver(jweak_ref(observer))
+    wJavaObserver(jweak_ref(observer)),
+    exceptions(exceptions_)
 {
 }
 
@@ -40,61 +41,73 @@ local_java_ref<jPacketObserver> WrappedPacketObserver::getObj(JNIEnv *env)
 
 void WrappedPacketObserver::OnSentPacket(TimeMs now, std::span<const uint8_t> payload)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto javaObserver = getObj(env);
+        auto javaObserver = getObj(env);
     
-    auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
+        auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
 
-    packetObserverClass.OnSentPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
+        packetObserverClass.OnSentPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
+    });
 }
 
 void WrappedPacketObserver::OnReceivedPacket(TimeMs now, std::span<const uint8_t> payload)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto javaObserver = getObj(env);
+        auto javaObserver = getObj(env);
     
-    auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
+        auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
 
-    packetObserverClass.OnReceivedPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
+        packetObserverClass.OnReceivedPacket(env, javaObserver, (jlong)*now, jPayload.c_ptr());
+    });
 }
 
 
-WrappedTimeout::WrappedTimeout(jTimeout timeout) :
+WrappedTimeout::WrappedTimeout(jTimeout timeout, CallbackExceptionSink& exceptions_) :
     timeoutClass(java_classes::get<Timeout_class>()),
-    timeout(jglobal_ref(timeout))
+    timeout(jglobal_ref(timeout)),
+    exceptions(exceptions_)
 {
 }
 
 void WrappedTimeout::Start(DurationMs duration, TimeoutID timeout_id)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    timeoutClass.start(env, timeout, *duration, *timeout_id);
+        timeoutClass.start(env, timeout, *duration, *timeout_id);
+    });
 }
 
 
 void WrappedTimeout::Stop()
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    timeoutClass.stop(env, timeout);
+        timeoutClass.stop(env, timeout);
+    });
 }
 
 
 void WrappedTimeout::Restart(DurationMs duration, TimeoutID timeout_id)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    timeoutClass.restart(env, timeout, *duration, *timeout_id);
+        timeoutClass.restart(env, timeout, *duration, *timeout_id);
+    });
 }
 
 
 
-WrappedSocketCallbacks::WrappedSocketCallbacks(jDcSctpSocketCallbacks callbacks) :
+WrappedSocketCallbacks::WrappedSocketCallbacks(jDcSctpSocketCallbacks callbacks, CallbackExceptionSink& exceptions_) :
     socketCallbacksClass(java_classes::get<DcSctpSocketCallbacks_class>()),
-    wSocketCallbacks(jweak_ref(callbacks))
+    wSocketCallbacks(jweak_ref(callbacks)),
+    exceptions(exceptions_)
 {
 }
 
@@ -118,28 +131,32 @@ void WrappedSocketCallbacks::SendPacket(std::span<const uint8_t> data)
 SendPacketStatus WrappedSocketCallbacks::SendPacketWithStatus(
         std::span<const uint8_t> data)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    return exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto jData = java_array_create<jbyte>(env, data.begin(), data.end());
+        auto jData = java_array_create<jbyte>(env, data.begin(), data.end());
 
-    jint status = socketCallbacksClass.sendPacketWithStatus_(env, socketCallbacks, jData.c_ptr());
+        jint status = socketCallbacksClass.sendPacketWithStatus_(env, socketCallbacks, jData.c_ptr());
 
-    return SendPacketStatus(status);
+        return SendPacketStatus(status);
+    }, SendPacketStatus::kError);
 }
 
 std::unique_ptr<Timeout> WrappedSocketCallbacks::CreateTimeout(
         webrtc::TaskQueueBase::DelayPrecision precision)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    return exceptions.callOr([&]() -> std::unique_ptr<Timeout> {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto timeout = socketCallbacksClass.createTimeout(env, socketCallbacks,
-                                                      enum_members::get<DelayPrecision_members>().map(env, precision));
+        auto timeout = socketCallbacksClass.createTimeout(env, socketCallbacks,
+                                                          enum_members::get<DelayPrecision_members>().map(env, precision));
 
-    return make_unique<WrappedTimeout>(timeout.c_ptr());
+        return make_unique<WrappedTimeout>(timeout.c_ptr(), exceptions);
+    }, []() -> std::unique_ptr<Timeout> { return make_unique<NullTimeout>(); });
 }
 
 TimeMs WrappedSocketCallbacks::TimeMillis()
@@ -149,156 +166,185 @@ TimeMs WrappedSocketCallbacks::TimeMillis()
 
 webrtc::Timestamp WrappedSocketCallbacks::Now()
 {
-    JNIEnv* env = jni_provider::get_jni();
+    return exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto instant = socketCallbacksClass.Now(env, socketCallbacks);
+        auto instant = socketCallbacksClass.Now(env, socketCallbacks);
 
-    return java_classes::get<Instant_class>().toTimestamp(env, instant);
+        lastNow = java_classes::get<Instant_class>().toTimestamp(env, instant);
+        return lastNow;
+    }, lastNow);
 }
 
 uint32_t WrappedSocketCallbacks::GetRandomInt(uint32_t low, uint32_t high)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    return exceptions.call([&]() -> uint32_t {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    return socketCallbacksClass.getRandomInt(env, socketCallbacks, low, high);
+        return socketCallbacksClass.getRandomInt(env, socketCallbacks, low, high);
+    }, low);
 }
 
 void WrappedSocketCallbacks::OnMessageReceived(DcSctpMessage message)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto payload = message.payload();
-    auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
+        auto payload = message.payload();
+        auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
 
-    socketCallbacksClass.OnMessageReceived_(env, socketCallbacks, jPayload.c_ptr(), *message.ppid(), *message.stream_id());
+        socketCallbacksClass.OnMessageReceived_(env, socketCallbacks, jPayload.c_ptr(), *message.ppid(), *message.stream_id());
+    });
 }
 
 void WrappedSocketCallbacks::OnMessageReady()
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    socketCallbacksClass.OnMessageReady(env, socketCallbacks);
+        socketCallbacksClass.OnMessageReady(env, socketCallbacks);
+    });
 }
 
 void WrappedSocketCallbacks::OnError(ErrorKind error, absl::string_view message)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto jmessage = java_string_create(env, message.data(), message.size());
+        auto jmessage = java_string_create(env, message.data(), message.size());
 
-    socketCallbacksClass.OnError(env, socketCallbacks, enum_members::get<ErrorKind_members>().map(env, error), jmessage);
+        socketCallbacksClass.OnError(env, socketCallbacks, enum_members::get<ErrorKind_members>().map(env, error), jmessage);
+    });
 }
 
 void WrappedSocketCallbacks::OnAborted(ErrorKind error, absl::string_view message)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto jmessage = java_string_create(env, message.data(), message.size());
+        auto jmessage = java_string_create(env, message.data(), message.size());
 
-    socketCallbacksClass.OnAborted(env, socketCallbacks, enum_members::get<ErrorKind_members>().map(env, error), jmessage);
+        socketCallbacksClass.OnAborted(env, socketCallbacks, enum_members::get<ErrorKind_members>().map(env, error), jmessage);
+    });
 }
 
 void WrappedSocketCallbacks::OnConnected()
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    socketCallbacksClass.OnConnected(env, socketCallbacks);
+        socketCallbacksClass.OnConnected(env, socketCallbacks);
+    });
 }
 
 void WrappedSocketCallbacks::OnClosed()
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    socketCallbacksClass.OnClosed(env, socketCallbacks);
+        socketCallbacksClass.OnClosed(env, socketCallbacks);
+    });
 }
 
 void WrappedSocketCallbacks::OnConnectionRestarted()
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    socketCallbacksClass.OnConnectionRestarted(env, socketCallbacks);
+        socketCallbacksClass.OnConnectionRestarted(env, socketCallbacks);
+    });
 }
 
 void WrappedSocketCallbacks::OnStreamsResetFailed(
         std::span<const StreamID> outgoing_streams,
         absl::string_view reason)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto jOutgoingStreams = java_array_create<jshort>(env, outgoing_streams.size());
-    java_array_access streamsAccess(env, jOutgoingStreams.c_ptr());
-    transform(outgoing_streams.begin(), outgoing_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
-    streamsAccess.commit();
+        auto jOutgoingStreams = java_array_create<jshort>(env, outgoing_streams.size());
+        java_array_access streamsAccess(env, jOutgoingStreams.c_ptr());
+        transform(outgoing_streams.begin(), outgoing_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
+        streamsAccess.commit();
 
-    auto jreason = java_string_create(env, reason.data(), reason.size());
+        auto jreason = java_string_create(env, reason.data(), reason.size());
 
-    socketCallbacksClass.OnStreamsResetFailed(env, socketCallbacks, jOutgoingStreams, jreason);
+        socketCallbacksClass.OnStreamsResetFailed(env, socketCallbacks, jOutgoingStreams, jreason);
+    });
 }
 
 void WrappedSocketCallbacks::OnStreamsResetPerformed(
         std::span<const StreamID> outgoing_streams)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto jOutgoingStreams = java_array_create<jshort>(env, outgoing_streams.size());
-    java_array_access streamsAccess(env, jOutgoingStreams.c_ptr());
-    transform(outgoing_streams.begin(), outgoing_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
-    streamsAccess.commit();
+        auto jOutgoingStreams = java_array_create<jshort>(env, outgoing_streams.size());
+        java_array_access streamsAccess(env, jOutgoingStreams.c_ptr());
+        transform(outgoing_streams.begin(), outgoing_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
+        streamsAccess.commit();
 
-    socketCallbacksClass.OnStreamsResetPerformed(env, socketCallbacks, jOutgoingStreams);
+        socketCallbacksClass.OnStreamsResetPerformed(env, socketCallbacks, jOutgoingStreams);
+    });
 }
 
 void WrappedSocketCallbacks::OnIncomingStreamsReset(
         std::span<const StreamID> incoming_streams)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    auto jIncomingStreams = java_array_create<jshort>(env, incoming_streams.size());
-    java_array_access streamsAccess(env, jIncomingStreams.c_ptr());
-    transform(incoming_streams.begin(), incoming_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
-    streamsAccess.commit();
+        auto jIncomingStreams = java_array_create<jshort>(env, incoming_streams.size());
+        java_array_access streamsAccess(env, jIncomingStreams.c_ptr());
+        transform(incoming_streams.begin(), incoming_streams.end(), streamsAccess.begin(), [](auto s) { return *s; });
+        streamsAccess.commit();
 
-    socketCallbacksClass.OnIncomingStreamsReset(env, socketCallbacks, jIncomingStreams);
+        socketCallbacksClass.OnIncomingStreamsReset(env, socketCallbacks, jIncomingStreams);
+    });
 }
 
 void WrappedSocketCallbacks::OnBufferedAmountLow(StreamID stream_id)
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    socketCallbacksClass.OnBufferedAmountLow(env, socketCallbacks, *stream_id);
+        socketCallbacksClass.OnBufferedAmountLow(env, socketCallbacks, *stream_id);
+    });
 }
 
 void WrappedSocketCallbacks::OnTotalBufferedAmountLow()
 {
-    JNIEnv* env = jni_provider::get_jni();
+    exceptions.call([&] {
+        JNIEnv* env = jni_provider::get_jni();
 
-    auto socketCallbacks = getObj(env);
+        auto socketCallbacks = getObj(env);
 
-    socketCallbacksClass.OnTotalBufferedAmountLow(env, socketCallbacks);
+        socketCallbacksClass.OnTotalBufferedAmountLow(env, socketCallbacks);
+    });
 }

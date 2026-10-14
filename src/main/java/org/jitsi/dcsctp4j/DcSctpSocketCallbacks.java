@@ -28,6 +28,15 @@ import smjni.jnigen.*;
  *
  * Theses callbacks are only synchronously triggered as a result of the client
  * calling a public method in {@link DcSctpSocketInterface}.
+ *
+ * If a callback throws, the exception is held until the library has finished
+ * processing, and is then thrown from the {@link DcSctpSocketInterface} method
+ * whose processing invoked the callback. No further callbacks are invoked for
+ * that method call once one has thrown. The library's own state is kept
+ * consistent, but the information the failed callback would have handled is
+ * lost (a timeout that could not be created never fires, a packet that could
+ * not be sent is reported to the library as a send error), so callers should
+ * treat the socket as unusable and {@link DcSctpSocketInterface#close} it.
  */
 @ExposeToNative
 public interface DcSctpSocketCallbacks
