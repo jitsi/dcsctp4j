@@ -43,8 +43,8 @@ CXXFLAGS += -Wno-uninitialized-const-pointer -Wno-unused-but-set-global
 CXXFLAGS += -Wshadow -Werror -Werror=\#pragma-messages
 CXXFLAGS += -fno-delete-null-pointer-checks -fno-strict-overflow -fno-ident
 CXXFLAGS += -fno-math-errno -fno-strict-aliasing -fstack-protector
-CXXFLAGS += -funwind-tables -fPIC -pthread -fdiagnostics-show-inlining-chain
-CXXFLAGS += -fmerge-all-constants -fno-lifetime-dse
+CXXFLAGS += -funwind-tables -fPIC -pthread
+CXXFLAGS += -fmerge-all-constants
 CXXFLAGS += -mllvm -instcombine-lower-dbg-declare=0
 CXXFLAGS += -mllvm -split-threshold-for-reg-with-hint=0
 CXXFLAGS += -ffp-contract=off -Wno-builtin-macro-redefined
@@ -53,12 +53,9 @@ CXXFLAGS += -ftrivial-auto-var-init=pattern $(DEBUG) -fdata-sections
 CXXFLAGS += -ffunction-sections -fno-unique-section-names -fno-omit-frame-pointer
 CXXFLAGS += -gdwarf-4 -g2 -gdwarf-aranges -gno-pubnames -Xclang -fuse-ctor-homing
 CXXFLAGS += -fsanitize=array-bounds -fsanitize-trap=array-bounds
-CXXFLAGS += -fsanitize-ignore-for-ubsan-feature=array-bounds
 CXXFLAGS += -Wno-unsafe-buffer-usage-in-static-sized-array
 CXXFLAGS += -fsanitize=return -fsanitize-trap=return
-CXXFLAGS += -fsanitize-ignore-for-ubsan-feature=return
 CXXFLAGS += -fsanitize=unreachable -fsanitize-trap=unreachable
-CXXFLAGS += -fsanitize-ignore-for-ubsan-feature=unreachable
 CXXFLAGS += -fvisibility=hidden -Wheader-hygiene -Wstring-conversion
 CXXFLAGS += -Wtautological-overlap-compare -Wexit-time-destructors
 CXXFLAGS += -Wglobal-constructors -Wctad-maybe-unsupported -Wc++11-narrowing
@@ -67,6 +64,18 @@ CXXFLAGS += -Wenum-compare-conditional -Wno-nullability-completeness
 CXXFLAGS += -std=c++20 -Wno-trigraphs -gsimple-template-names
 CXXFLAGS += -fno-exceptions -fno-rtti -fvisibility-inlines-hidden
 CXXFLAGS += -Wnon-virtual-dtor -Woverloaded-virtual
+# These options exist only in the clang that WebRTC bundles (newer than any
+# released clang at the time of writing). Add them when the compiler accepts
+# them, so a distribution clang can still use this Makefile; silence its
+# complaints about -Wno-* options it does not know.
+CXXFLAGS += -Wno-unknown-warning-option
+TOT_CLANG_FLAGS = -fdiagnostics-show-inlining-chain -fno-lifetime-dse \
+    -fsanitize-ignore-for-ubsan-feature=array-bounds \
+    -fsanitize-ignore-for-ubsan-feature=return \
+    -fsanitize-ignore-for-ubsan-feature=unreachable
+ifeq ($(shell $(CXX) $(TOT_CLANG_FLAGS) -fsyntax-only -x c++ /dev/null >/dev/null 2>&1 && echo yes),yes)
+CXXFLAGS += $(TOT_CLANG_FLAGS)
+endif
 # gn adds these for arm64 targets; derive them from the compiler target here.
 ifneq ($(shell $(CXX) -dM -E - </dev/null | grep -c __aarch64__),0)
 CXXFLAGS += -DWEBRTC_ARCH_ARM64 -DWEBRTC_HAS_NEON -D__ARM_NEON__=1

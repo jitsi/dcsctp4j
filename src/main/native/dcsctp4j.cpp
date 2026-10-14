@@ -15,6 +15,7 @@
  */
 
 #include <smjni/smjni.h>
+#include <exception>
 #include "all_classes.h"
 #include <net/dcsctp/public/dcsctp_socket_factory.h>
 #include "wrapped_objects.h"
@@ -99,12 +100,27 @@ NATIVE_PROLOG
     DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
 
     auto & operatorClass = java_classes::get<LongBinaryOperator_class>();
-    /* GenerateConnectionToken calls this synchronously, so env stays valid for the duration. */
-    auto getRandomInt = [env, &operatorClass, jGetRandomInt](uint32_t low, uint32_t high) -> uint32_t {
-        return static_cast<uint32_t>(operatorClass.applyAsLong(env, jGetRandomInt, low, high));
+    /* GenerateConnectionToken calls this synchronously, so env stays valid for the duration.
+       dcsctp is compiled without exception support, so an exception from the Java callback
+       must not unwind through it: hold it and rethrow once dcsctp has returned. */
+    std::exception_ptr pending;
+    auto getRandomInt = [env, &operatorClass, jGetRandomInt, &pending](uint32_t low, uint32_t high) -> uint32_t {
+        if (pending) {
+            return low;
+        }
+        try {
+            return static_cast<uint32_t>(operatorClass.applyAsLong(env, jGetRandomInt, low, high));
+        }
+        catch (...) {
+            pending = std::current_exception();
+            return low;
+        }
     };
 
     vector<uint8_t> token = factory->GenerateConnectionToken(*options, getRandomInt);
+    if (pending) {
+        std::rethrow_exception(pending);
+    }
 
     auto jToken = java_array_create<jbyte>(env, token.size());
     auto aToken = java_array_access(env, jToken);

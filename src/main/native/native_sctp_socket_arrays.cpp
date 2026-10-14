@@ -51,8 +51,8 @@ NATIVE_PROLOG
     auto statusArray = java_array_create<jint>(env, statuses.size());
     java_array_access statusArrayAccess(env, statusArray.c_ptr());
     transform(statuses.cbegin(), statuses.cend(), statusArrayAccess.begin(), [](auto e) { return (int)e; });
-    statusArrayAccess.commit(env);
-    return statusArray.release();;
+    statusArrayAccess.commit();
+    return statusArray.release();
 NATIVE_EPILOG_Z
 }
 

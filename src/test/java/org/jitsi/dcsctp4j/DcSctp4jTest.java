@@ -446,14 +446,19 @@ class TestCallbacks implements DcSctpSocketCallbacks {
 
     @Override
     public void OnMessageReceived(@NotNull DcSctpMessage message) {
-        assertFalse(pullMode);
-        messagesReceived.incrementAndGet();
-        String s = new String(message.getPayload(), StandardCharsets.UTF_8);
+        try {
+            assertFalse(pullMode, "OnMessageReceived must not be called in pull mode");
+            messagesReceived.incrementAndGet();
+            String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
-        logger.info("Message received: " +
-                "streamID " + message.getStreamID() +
-                ", PPID " + message.getPpid() +
-                ", payload " + s);
+            logger.info("Message received: " +
+                    "streamID " + message.getStreamID() +
+                    ", PPID " + message.getPpid() +
+                    ", payload " + s);
+        } catch (Throwable e) {
+            failed = true;
+            logger.error("Error processing OnMessageReceived", e);
+        }
     }
 
     @Override

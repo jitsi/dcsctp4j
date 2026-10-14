@@ -22,6 +22,7 @@ import smjni.jnigen.ExposeToNative;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.LongBinaryOperator;
 import java.util.stream.Collectors;
 
@@ -78,6 +79,8 @@ public class DcSctpSocketFactory
             @NotNull DcSctpOptions options,
             @NotNull LongBinaryOperator getRandomInt)
     {
+        Objects.requireNonNull(options, "options");
+        Objects.requireNonNull(getRandomInt, "getRandomInt");
         return generateConnectionToken_(ptr, options, getRandomInt);
     }
 
