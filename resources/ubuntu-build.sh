@@ -137,3 +137,47 @@ cmake -B cmake-build-linux-"$DEBARCH" \
     -DCMAKE_BUILD_TYPE=$DEBUG_CMAKE_BUILD_TYPE
 
 cmake --build cmake-build-linux-"$DEBARCH" --target install $CMAKE_BUILD_ARGS $VERBOSE_CMAKE
+
+# The libraries must not require anything newer than the sysroot provides,
+# whatever toolchain quirk might otherwise sneak a newer symbol version in.
+# These are what WebRTC's Debian bullseye sysroot ships: glibc 2.31 and
+# libstdc++ 10. Update them if WebRTC moves to a newer sysroot.
+SYSROOT_MAX_GLIBC=2.31
+SYSROOT_MAX_GLIBCXX=3.4.28
+SYSROOT_MAX_CXXABI=1.3.12
+
+# True if version $1 is newer than version $2.
+version_newer() {
+    test "$(printf '%s\n%s\n' "$1" "$2" | sort -V | tail -1)" != "$2"
+}
+
+# Fails if the library needs a GLIBC, GLIBCXX or CXXABI symbol version newer
+# than the sysroot's. Version nodes with a variant infix, such as the
+# ppc64le GLIBCXX_IEEE128_3.4.29 and CXXABI_LDBL_1.3.3, are checked too.
+check_symbol_versions() {
+    local lib=$1 ok=true versions prefix max ceiling
+    if ! test -r "$lib"; then
+        echo "ERROR: $lib does not exist" >&2
+        return 1
+    fi
+    versions=$(readelf -V "$lib") || { echo "ERROR: readelf failed on $lib" >&2; return 1; }
+    for prefix in GLIBC GLIBCXX CXXABI; do
+        max=$(printf '%s\n' "$versions" | grep -oE "\b${prefix}_([A-Z0-9]+_)?[0-9.]+" | sed -E "s/^${prefix}_([A-Z0-9]+_)?//" | sort -V | tail -1)
+        case $prefix in
+            GLIBC) ceiling=$SYSROOT_MAX_GLIBC ;;
+            GLIBCXX) ceiling=$SYSROOT_MAX_GLIBCXX ;;
+            CXXABI) ceiling=$SYSROOT_MAX_CXXABI ;;
+        esac
+        if [ -z "$max" ]; then
+            echo "ERROR: $lib references no ${prefix}_ symbol versions at all; is it a real build?" >&2
+            ok=false
+        elif version_newer "$max" "$ceiling"; then
+            echo "ERROR: $lib requires ${prefix}_$max, newer than the sysroot's $ceiling" >&2
+            ok=false
+        else
+            echo "$lib requires at most ${prefix}_$max (sysroot: $ceiling)"
+        fi
+    done
+    $ok
+}
+check_symbol_versions "src/main/resources/linux-$JNAARCH/libdcsctp4j.so"
