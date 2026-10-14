@@ -60,6 +60,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
                       dcsctp
                       )
 
+# Fail the link if the static dcsctp library is missing anything the wrapper needs,
+# instead of leaving undefined symbols to surface when Java loads the library.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:--no-undefined")
+endif()
+
 # WebRTC log framework uses CoreServices if NDEBUG
 if(APPLE)
         target_link_libraries(${PROJECT_NAME} PRIVATE

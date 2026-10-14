@@ -29,7 +29,7 @@ CXXFLAGS += -Wno-unused-parameter -Wno-psabi -Wno-cast-function-type
 CXXFLAGS += -Wno-invalid-offsetof -Wshadow -Werror
 CXXFLAGS += -fno-delete-null-pointer-checks -fno-ident -fno-strict-aliasing
 CXXFLAGS += -fstack-protector -funwind-tables -fPIC -pthread
-CXXFLAGS += -fmerge-all-constants -ffp-contract=off -m64
+CXXFLAGS += -fmerge-all-constants -ffp-contract=off
 CXXFLAGS += -Wno-builtin-macro-redefined -D__DATE__= -D__TIME__=
 CXXFLAGS += -D__TIMESTAMP__= -no-canonical-prefixes
 CXXFLAGS += $(DEBUG) -fdata-sections
@@ -41,6 +41,11 @@ CXXFLAGS += -fvisibility-inlines-hidden -Wnon-virtual-dtor -Woverloaded-virtual
 # Silence GCC 12 warnings.
 CXXFLAGS += -Wno-return-type -Wno-overloaded-virtual -Wno-comment -Wno-undef
 CXXFLAGS += -Wno-redundant-move
+CXXFLAGS += -Wno-unknown-warning-option
+# gn defines the target architecture for WebRTC; derive it from the compiler here.
+ifneq ($(shell $(CXX) -dM -E - </dev/null | grep -c __aarch64__),0)
+CXXFLAGS += -DWEBRTC_ARCH_ARM64 -DWEBRTC_HAS_NEON
+endif
 # GCC 10 at -O2 reports a false -Wmaybe-uninitialized in rtc_base/logging.cc.
 CXXFLAGS += -Wno-maybe-uninitialized
 # Add include paths to fix compilation errors due to missing headers.
@@ -60,6 +65,7 @@ DIRS = $(shell find $(S) -maxdepth 6 -type d -print)
 # Add other objects required to fix libdcsctp4j.so errors; first compilation
 # errors, then undefined symbol errors reported at runtime by the dynamic
 # linker.
+OBJECTS += $(S)/api/task_queue/task_queue_base.o
 OBJECTS += $(S)/api/units/time_delta.o
 OBJECTS += $(S)/rtc_base/checks.o
 OBJECTS += $(S)/rtc_base/logging.o
@@ -71,6 +77,10 @@ OBJECTS += $(S)/rtc_base/strings/string_format.o
 OBJECTS += $(S)/rtc_base/system_time.o
 OBJECTS += $(S)/rtc_base/time_utils.o
 OBJECTS += $(S)/third_party/abseil-cpp/absl/base/internal/raw_logging.o
+# absl/crc is needed by net/dcsctp/packet/crc32c.cc and by absl/strings/cord.cc.
+ABSL_CRC_TESTS = $(shell find $(S)/third_party/abseil-cpp/absl/crc -name "*_test*.cc" -o -name "*_benchmark*.cc")
+ABSL_CRC_SOURCES = $(shell find $(S)/third_party/abseil-cpp/absl/crc -name "*.cc")
+OBJECTS += $(patsubst %.cc,%.o,$(filter-out $(ABSL_CRC_TESTS),$(ABSL_CRC_SOURCES)))
 # absl/strings is complicated, so assume all non-test and non-benchmark .cc files
 # are needed.
 ABSL_STRINGS_TESTS = $(shell find $(S)/third_party/abseil-cpp/absl/strings -name "*_test*.cc" -o -name "*_benchmark*.cc")
