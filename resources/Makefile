@@ -74,8 +74,6 @@ endif
 # Add include paths to fix compilation errors due to missing headers.
 CXXFLAGS += -I$(S)
 CXXFLAGS += -I$(S)/third_party/abseil-cpp
-CXXFLAGS += -I$(S)/third_party/crc32c/config
-CXXFLAGS += -I$(S)/third_party/crc32c/src/include
 # Assume all non-test .cc files under net/dcsctp are needed by libdcsctp4j.so.
 # "gn/ninja" includes 37 extra objects but they are not needed by
 # libdcsctp4j.so.
@@ -110,8 +108,6 @@ ABSL_STRINGS_TESTS = $(shell find $(S)/third_party/abseil-cpp/absl/strings -name
 ABSL_STRINGS_SOURCES = $(shell find $(S)/third_party/abseil-cpp/absl/strings -name "*.cc")
 ABSL_STRINGS_OBJECTS = $(patsubst %.cc,%.o,$(filter-out $(ABSL_STRINGS_TESTS),$(ABSL_STRINGS_SOURCES)))
 OBJECTS += $(ABSL_STRINGS_OBJECTS)
-OBJECTS += $(S)/third_party/crc32c/src/src/crc32c.o
-OBJECTS += $(S)/third_party/crc32c/src/src/crc32c_portable.o
 # Keep built object paths separate from source code paths.
 ifeq ($(strip $(OBJDIR)),)
 $(error "Set OBJDIR to absolute path in which to store output objects")
