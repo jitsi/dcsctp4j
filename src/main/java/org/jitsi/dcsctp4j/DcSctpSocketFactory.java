@@ -73,7 +73,11 @@ public class DcSctpSocketFactory
      *
      * {@code getRandomInt} must return a uniformly random value in the range
      * {@code [low, high)}; it is used in the same way as
-     * {@link DcSctpSocketCallbacks#getRandomInt}.
+     * {@link DcSctpSocketCallbacks#getRandomInt}. An exception thrown by
+     * {@code getRandomInt} propagates to the caller.
+     *
+     * @throws IllegalArgumentException if {@code getRandomInt} returns a value outside
+     * {@code [low, high)}.
      */
     public byte @NotNull [] generateConnectionToken(
             @NotNull DcSctpOptions options,
@@ -81,7 +85,18 @@ public class DcSctpSocketFactory
     {
         Objects.requireNonNull(options, "options");
         Objects.requireNonNull(getRandomInt, "getRandomInt");
-        return generateConnectionToken_(ptr, options, getRandomInt);
+        /* Validate the callback's results here, so that a misbehaving callback surfaces as an
+           ordinary IllegalArgumentException; the native code only carries Java exceptions through. */
+        LongBinaryOperator checked = (low, high) -> {
+            long value = getRandomInt.applyAsLong(low, high);
+            if (value < low || value >= high)
+            {
+                throw new IllegalArgumentException("getRandomInt returned " + value +
+                        ", outside [" + low + ", " + high + ")");
+            }
+            return value;
+        };
+        return generateConnectionToken_(ptr, options, checked);
     }
 
     private native byte[] generateConnectionToken_(
@@ -158,6 +173,13 @@ public class DcSctpSocketFactory
         {
             Objects.requireNonNull(myData, "myData");
             Objects.requireNonNull(peerData, "peerData");
+            /* dcsctp itself does not check the state here: on a connected socket it would
+               silently rebuild the association. */
+            SocketState state = state();
+            if (state != SocketState.kClosed)
+            {
+                throw new IllegalStateException("connectWithConnectionToken requires a closed socket, state is " + state);
+            }
             return connectWithConnectionToken_(ptr, myData, peerData);
         }
 

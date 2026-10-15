@@ -68,8 +68,13 @@ public interface DcSctpSocketInterface
      * {@link DcSctpSocketFactory#generateConnectionToken}, and {@code peerData} is the
      * token the peer generated and exchanged out of band.
      *
+     * The socket must be in state {@link SocketState#kClosed}, i.e. newly created or
+     * closed, since the sequence replaces the whole association.
+     *
      * Implementations that do not support the out-of-band sequence throw
      * {@link UnsupportedOperationException}, so that it cannot be mistaken for a rejected token.
+     *
+     * @throws IllegalStateException if the socket is not closed.
      */
     default boolean connectWithConnectionToken(byte @NotNull [] myData, byte @NotNull [] peerData)
     {

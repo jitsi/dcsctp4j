@@ -311,10 +311,17 @@ public class DcSctp4jTest {
         assertEquals(SocketState.kConnected, pair.client.socket.state());
         assertEquals(SocketState.kConnected, pair.server.socket.state());
 
+        // Connecting again on a connected socket is a programming error, not a token problem.
+        assertThrows(IllegalStateException.class,
+                () -> pair.client.socket.connectWithConnectionToken(clientToken, serverToken));
+
         // The association works: a message gets through and the sockets stay connected.
         DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         pair.client.socket.send(message, new SendOptions());
-        sleep(100);
+        waitUntil(() -> !pair.serverCallbacks.messagesReceived.isEmpty(), 2000);
+        assertEquals(1, pair.serverCallbacks.messagesReceived.size(), "server should receive the message");
+        assertArrayEquals("Hello".getBytes(StandardCharsets.UTF_8),
+                pair.serverCallbacks.messagesReceived.get(0).getPayload());
         assertEquals(SocketState.kConnected, pair.client.socket.state());
         assertEquals(SocketState.kConnected, pair.server.socket.state());
 
@@ -325,6 +332,36 @@ public class DcSctp4jTest {
         assertEquals(SocketState.kClosed, pair.server.socket.state());
         assertFalse(pair.clientCallbacks.failed);
         assertFalse(pair.serverCallbacks.failed);
+    }
+
+    /**
+     * The random-number callback given to generateConnectionToken runs inside dcsctp, which is
+     * compiled without exception support, so its failures have to be carried around dcsctp and
+     * surface to the caller as if the callback had been called directly.
+     */
+    @Test
+    public void testGenerateConnectionTokenCallbackFailures() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        DcSctpOptions options = new DcSctpOptions();
+
+        // A throwing callback propagates its own exception.
+        IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                () -> factory.generateConnectionToken(options, (low, high) -> {
+                    throw new IllegalStateException("no entropy today");
+                }));
+        assertEquals("no entropy today", thrown.getMessage());
+
+        // An out-of-range result is rejected (one past the end of the half-open range).
+        IllegalArgumentException outOfRange = assertThrows(IllegalArgumentException.class,
+                () -> factory.generateConnectionToken(options, (low, high) -> high));
+        assertTrue(outOfRange.getMessage().startsWith("getRandomInt returned"), outOfRange.getMessage());
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.generateConnectionToken(options, (low, high) -> low - 1));
+
+        // The factory is still usable afterwards.
+        byte[] token = factory.generateConnectionToken(options,
+                (low, high) -> ThreadLocalRandom.current().nextLong(low, high));
+        assertTrue(token.length > 0);
     }
 
     private static void sleep(long millis) {
@@ -352,6 +389,8 @@ public class DcSctp4jTest {
         test.testIncomingStreamsReset();
         System.out.println("Running testConnectWithConnectionToken");
         test.testConnectWithConnectionToken();
+        System.out.println("Running testGenerateConnectionTokenCallbackFailures");
+        test.testGenerateConnectionTokenCallbackFailures();
         /* System.out.println("Testing testExceptionThroughJNI");
         test.testExceptionThroughJNI(); */
         DcSctp4jTest.executor.shutdown();
