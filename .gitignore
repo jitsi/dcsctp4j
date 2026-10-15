@@ -1,0 +1,16 @@
+# Maven
+target/
+
+# Native build output (the installed libraries are packaged by the release process)
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+src/main/resources/
+
+# Scratch space and editor backups
+scratch/
+*~
+hs_err_pid*.log
+
+# IDE
+.idea/

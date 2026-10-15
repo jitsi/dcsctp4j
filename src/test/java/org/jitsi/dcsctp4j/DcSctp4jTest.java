@@ -20,6 +20,10 @@ import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.junit.jupiter.api.*;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -27,10 +31,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -139,11 +141,15 @@ public class DcSctp4jTest {
         DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         SendOptions sendOptions = new SendOptions();
         client.socket.send(message, sendOptions);
-        waitUntil(() -> pair.serverCallbacks.messagesReceived.get() > 0, 2000);
+        waitUntil(() -> !pair.serverCallbacks.messagesReceived.isEmpty(), 2000);
 
-        assertEquals(1, pair.serverCallbacks.messagesReceived.get(),
+        assertEquals(1, pair.serverCallbacks.messagesReceived.size(),
                 "server should have received the message via " + (pullMode ? "OnMessageReady" : "OnMessageReceived"));
-        assertEquals(0, pair.clientCallbacks.messagesReceived.get());
+        DcSctpMessage received = pair.serverCallbacks.messagesReceived.get(0);
+        assertEquals(0, received.getStreamID());
+        assertEquals(0, received.getPpid());
+        assertArrayEquals("Hello".getBytes(StandardCharsets.UTF_8), received.getPayload());
+        assertEquals(0, pair.clientCallbacks.messagesReceived.size(), "client should not receive anything");
         assertEquals(SocketState.kConnected, client.socket.state());
         assertEquals(SocketState.kConnected, server.socket.state());
 
@@ -204,7 +210,7 @@ public class DcSctp4jTest {
         Class<?> clazz = wrapper.socket.getClass();
         Method receivePacket_ = clazz.getDeclaredMethod("receivePacket_", long.class, byte[].class, int.class, int.class);
         receivePacket_.setAccessible(true);
-        java.lang.reflect.Field ptrField = clazz.getDeclaredField("ptr");
+        Field ptrField = clazz.getDeclaredField("ptr");
         ptrField.setAccessible(true);
         long ptr = ptrField.getLong(wrapper.socket);
 
@@ -233,7 +239,9 @@ public class DcSctp4jTest {
         DcSctpMessage message = new DcSctpMessage((short) 3, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         client.socket.send(message, new SendOptions());
         // The reset is only performed, not deferred, once the message has been delivered and acked.
-        waitUntil(() -> serverCallbacks.messagesReceived.get() > 0 && client.socket.bufferedAmount((short) 3) == 0, 2000);
+        waitUntil(() -> !serverCallbacks.messagesReceived.isEmpty() && client.socket.bufferedAmount((short) 3) == 0, 2000);
+        assertEquals(1, serverCallbacks.messagesReceived.size(), "server should receive the message on stream 3");
+        assertEquals(3, serverCallbacks.messagesReceived.get(0).getStreamID());
         sleep(50);
 
         ResetStreamsStatus status = client.socket.resetStreams(Collections.singletonList((short) 3));
@@ -264,7 +272,7 @@ public class DcSctp4jTest {
     }
 
     /** Polls {@code condition} until it holds or {@code timeoutMillis} elapses. */
-    private static void waitUntil(java.util.function.BooleanSupplier condition, long timeoutMillis) {
+    private static void waitUntil(BooleanSupplier condition, long timeoutMillis) {
         long deadline = System.currentTimeMillis() + timeoutMillis;
         while (!condition.getAsBoolean() && System.currentTimeMillis() < deadline) {
             sleep(10);
@@ -326,7 +334,7 @@ public class DcSctp4jTest {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         DcSctp4jTest test = new DcSctp4jTest();
         System.out.println("Running testLoad");
         test.testLoad();
@@ -334,10 +342,18 @@ public class DcSctp4jTest {
         test.testSocketCreate();
         System.out.println("Running testSimpleConnection");
         test.testSimpleConnection();
-        /* System.out.println("Testing testExceptionThroughJNI");
-        test.testExceptionThroughJNI(); */
         System.out.println("Running testPullModeConnection");
         test.testPullModeConnection();
+        System.out.println("Running testReceivePacketRejectsInvalidBounds");
+        test.testReceivePacketRejectsInvalidBounds();
+        System.out.println("Running testNativeReceivePacketRejectsInvalidBounds");
+        test.testNativeReceivePacketRejectsInvalidBounds();
+        System.out.println("Running testIncomingStreamsReset");
+        test.testIncomingStreamsReset();
+        System.out.println("Running testConnectWithConnectionToken");
+        test.testConnectWithConnectionToken();
+        /* System.out.println("Testing testExceptionThroughJNI");
+        test.testExceptionThroughJNI(); */
         DcSctp4jTest.executor.shutdown();
     }
 }
@@ -386,7 +402,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
 
     public volatile boolean failed = false;
     /** Messages received, whether delivered by OnMessageReceived or fetched after OnMessageReady. */
-    public final AtomicInteger messagesReceived = new AtomicInteger();
+    public final List<DcSctpMessage> messagesReceived = Collections.synchronizedList(new ArrayList<>());
 
     public final List<short[]> streamsResetPerformed = Collections.synchronizedList(new ArrayList<>());
     public final List<short[]> incomingStreamsReset = Collections.synchronizedList(new ArrayList<>());
@@ -450,7 +466,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     public void OnMessageReceived(@NotNull DcSctpMessage message) {
         try {
             assertFalse(pullMode, "OnMessageReceived must not be called in pull mode");
-            messagesReceived.incrementAndGet();
+            messagesReceived.add(message);
             String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
             logger.info("Message received: " +
@@ -474,7 +490,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
             // One OnMessageReady may announce several messages; drain the queue.
             DcSctpMessage message;
             while ((message = wrapper.socket.getNextMessage()) != null) {
-                messagesReceived.incrementAndGet();
+                messagesReceived.add(message);
                 String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
                 logger.info("Message received with pull: " +
