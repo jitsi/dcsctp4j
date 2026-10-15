@@ -20,6 +20,9 @@ import org.jitsi.utils.logging2.Logger;
 import org.jitsi.utils.logging2.LoggerImpl;
 import org.junit.jupiter.api.*;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -27,9 +30,8 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.concurrent.*;
+import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -123,7 +125,14 @@ public class DcSctp4jTest {
         DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         SendOptions sendOptions = new SendOptions();
         client.socket.send(message, sendOptions);
-        sleep(100);
+        waitUntil(() -> !pair.serverCallbacks.messagesReceived.isEmpty(), 2000);
+
+        assertEquals(1, pair.serverCallbacks.messagesReceived.size(), "server should receive the message");
+        DcSctpMessage received = pair.serverCallbacks.messagesReceived.get(0);
+        assertEquals(0, received.getStreamID());
+        assertEquals(0, received.getPpid());
+        assertArrayEquals("Hello".getBytes(StandardCharsets.UTF_8), received.getPayload());
+        assertEquals(0, pair.clientCallbacks.messagesReceived.size(), "client should not receive anything");
 
         assertEquals(SocketState.kConnected, client.socket.state());
         assertEquals(SocketState.kConnected, server.socket.state());
@@ -182,7 +191,7 @@ public class DcSctp4jTest {
         Class<?> clazz = wrapper.socket.getClass();
         Method receivePacket_ = clazz.getDeclaredMethod("receivePacket_", long.class, byte[].class, int.class, int.class);
         receivePacket_.setAccessible(true);
-        java.lang.reflect.Field ptrField = clazz.getDeclaredField("ptr");
+        Field ptrField = clazz.getDeclaredField("ptr");
         ptrField.setAccessible(true);
         long ptr = ptrField.getLong(wrapper.socket);
 
@@ -210,7 +219,9 @@ public class DcSctp4jTest {
         // Use stream 3 so that it exists on both sides before resetting it.
         DcSctpMessage message = new DcSctpMessage((short) 3, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         client.socket.send(message, new SendOptions());
-        sleep(100);
+        waitUntil(() -> !serverCallbacks.messagesReceived.isEmpty(), 2000);
+        assertEquals(1, serverCallbacks.messagesReceived.size(), "server should receive the message on stream 3");
+        assertEquals(3, serverCallbacks.messagesReceived.get(0).getStreamID());
 
         ResetStreamsStatus status = client.socket.resetStreams(Collections.singletonList((short) 3));
         assertEquals(ResetStreamsStatus.kPerformed, status);
@@ -240,7 +251,7 @@ public class DcSctp4jTest {
     }
 
     /** Polls {@code condition} until it holds or {@code timeoutMillis} elapses. */
-    private static void waitUntil(java.util.function.BooleanSupplier condition, long timeoutMillis) {
+    private static void waitUntil(BooleanSupplier condition, long timeoutMillis) {
         long deadline = System.currentTimeMillis() + timeoutMillis;
         while (!condition.getAsBoolean() && System.currentTimeMillis() < deadline) {
             sleep(10);
@@ -254,7 +265,7 @@ public class DcSctp4jTest {
         }
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         DcSctp4jTest test = new DcSctp4jTest();
         System.out.println("Running testLoad");
         test.testLoad();
@@ -262,6 +273,12 @@ public class DcSctp4jTest {
         test.testSocketCreate();
         System.out.println("Running testSimpleConnection");
         test.testSimpleConnection();
+        System.out.println("Running testReceivePacketRejectsInvalidBounds");
+        test.testReceivePacketRejectsInvalidBounds();
+        System.out.println("Running testNativeReceivePacketRejectsInvalidBounds");
+        test.testNativeReceivePacketRejectsInvalidBounds();
+        System.out.println("Running testIncomingStreamsReset");
+        test.testIncomingStreamsReset();
         /* System.out.println("Testing testExceptionThroughJNI");
         test.testExceptionThroughJNI(); */
         DcSctp4jTest.executor.shutdown();
@@ -312,6 +329,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     public final List<short[]> streamsResetPerformed = Collections.synchronizedList(new ArrayList<>());
     public final List<short[]> incomingStreamsReset = Collections.synchronizedList(new ArrayList<>());
     public final List<short[]> streamsResetFailed = Collections.synchronizedList(new ArrayList<>());
+    public final List<DcSctpMessage> messagesReceived = Collections.synchronizedList(new ArrayList<>());
 
     public TestCallbacks(SocketWrapper wrapper, Clock clock, Logger logger, SocketWrapper dest)
     {
@@ -383,6 +401,7 @@ class TestCallbacks implements DcSctpSocketCallbacks {
                 "streamID " + message.getStreamID() +
                 ", PPID " + message.getPpid() +
                 ", payload " + s);
+        messagesReceived.add(message);
     }
 
     @Override
