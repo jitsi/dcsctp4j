@@ -17,9 +17,30 @@
 #include "wrapped_objects.h"
 #include "dcsctp4j.h"
 
+#include <rtc_base/logging.h>
+
 using namespace smjni;
 using namespace dcsctp;
 using namespace std;
+
+void CallbackExceptionSink::report(std::exception_ptr ex) noexcept
+{
+    try {
+        std::rethrow_exception(ex);
+    }
+    catch (java_exception& jex) {
+        JNIEnv* env = jni_provider::get_jni();
+        /* Prints the exception and its stack trace to stderr, and clears it. */
+        jex.raise(env);
+        env->ExceptionDescribe();
+    }
+    catch (std::exception& e) {
+        RTC_LOG(LS_ERROR) << "Exception from a Java callback during socket teardown: " << e.what();
+    }
+    catch (...) {
+        RTC_LOG(LS_ERROR) << "Unknown exception from a Java callback during socket teardown";
+    }
+}
 
 WrappedPacketObserver::WrappedPacketObserver(jPacketObserver observer, CallbackExceptionSink& exceptions_) :
     packetObserverClass(java_classes::get<PacketObserver_class>()),

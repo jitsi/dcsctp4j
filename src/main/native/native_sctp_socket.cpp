@@ -34,11 +34,12 @@ void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::destruct(JNIEnv *env, j
 {
 NATIVE_PROLOG
     std::unique_ptr<NativeSctpSocket> nativeSocket((NativeSctpSocket*)(intptr_t)ptr);
-    /* Destroying the dcsctp socket stops its timers, which calls back into Java. Tear
-       it down first so that an exception from those callbacks is reported rather than
-       destroyed along with the sink; the unique_ptr frees the rest either way. */
+    /* Destroying the dcsctp socket stops its timers, which calls back into Java. This
+       runs from the Cleaner, so there is no caller to report an exception to; deliver
+       every stop() regardless and describe any exception rather than letting one
+       failure leave the other timers scheduled. */
+    nativeSocket->exceptions.beginBestEffort();
     nativeSocket->socket.reset();
-    nativeSocket->exceptions.rethrow();
 NATIVE_EPILOG
 }
 

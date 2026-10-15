@@ -59,16 +59,29 @@ static local_java_ref<jstring> jstring_from(JNIEnv * env, absl::string_view str)
 
 void LogProxy::OnLogMessage(const LogLineRef& line)
 {
+    /* Called from webrtc::LogMessage's destructor, which is noexcept, so nothing may
+       escape from here: a Java exception (from the handler, or from building the
+       strings) is described to stderr and dropped. Logging it through WebRTC would
+       re-enter this sink. */
     JNIEnv* env = jni_provider::get_jni();
+    try {
+        auto message = jstring_from(env, line.message());
+        auto filename = jstring_from(env, line.filename());
+        jint lineNo = line.line();
+        jInteger threadId = java_classes::get<Integer_class>().fromOptionalInt(env, line.thread_id());
+        jlong timestampUs = line.timestamp().IsFinite() ? line.timestamp().us() : numeric_limits<jlong>::min();
+        auto severity = enum_members::get<LoggingSeverity_members>().map(env, line.severity());
 
-    auto message = jstring_from(env, line.message());
-    auto filename = jstring_from(env, line.filename());
-    jint lineNo = line.line();
-    jInteger threadId = java_classes::get<Integer_class>().fromOptionalInt(env, line.thread_id());
-    jlong timestampUs = line.timestamp().IsFinite() ? line.timestamp().us() : numeric_limits<jlong>::min();
-    auto severity = enum_members::get<LoggingSeverity_members>().map(env, line.severity());
-
-    java_classes::get<LogProxy_class>().onLogMessage(env, logProxy, message, filename, lineNo, threadId, timestampUs, severity);
+        java_classes::get<LogProxy_class>().onLogMessage(env, logProxy, message, filename, lineNo, threadId, timestampUs, severity);
+    }
+    catch (java_exception& ex) {
+        ex.raise(env);
+        env->ExceptionDescribe();
+    }
+    catch (std::exception& ex) {
+        java_exception::translate(env, ex);
+        env->ExceptionDescribe();
+    }
 }
 
 

@@ -40,14 +40,19 @@ public:
     template <typename Body, typename Fallback>
     auto callOr(Body&& body, Fallback&& fallback) -> decltype(body())
     {
-        if (pending_) {
+        if (pending_ && !bestEffort_) {
             return fallback();
         }
         try {
             return body();
         }
         catch (...) {
-            pending_ = std::current_exception();
+            if (bestEffort_) {
+                report(std::current_exception());
+            }
+            else {
+                pending_ = std::current_exception();
+            }
             return fallback();
         }
     }
@@ -67,6 +72,14 @@ public:
     /* Drops the pending exception, if any, without rethrowing it. */
     void discard() { pending_ = nullptr; }
 
+    /*
+     * Switches to best-effort mode, for tearing the socket down: every callback is
+     * still delivered, even after one has thrown, and each exception is reported
+     * (ExceptionDescribe) and dropped rather than held. Used when there is no caller
+     * to rethrow to, so that every timer gets its stop().
+     */
+    void beginBestEffort() { bestEffort_ = true; }
+
     /* Rethrows and clears the pending exception, if any. */
     void rethrow()
     {
@@ -77,7 +90,10 @@ public:
     }
 
 private:
+    static void report(std::exception_ptr ex) noexcept;
+
     std::exception_ptr pending_;
+    bool bestEffort_ = false;
 };
 
 class WrappedSocketCallbacks: public dcsctp::DcSctpSocketCallbacks {

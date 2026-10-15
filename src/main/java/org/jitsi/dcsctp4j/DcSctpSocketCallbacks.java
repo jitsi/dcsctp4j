@@ -35,11 +35,15 @@ import smjni.jnigen.*;
  * {@link DcSctpSocketFactory#create}, which already invokes {@link #createTimeout}
  * and {@link #Now}). No further callbacks are invoked for that method call once
  * one has thrown; in particular a {@link Timeout} whose {@code start()} was
- * suppressed this way never receives {@code stop()} or {@code restart()}. The library's own state is kept
- * consistent, but the information the failed callback would have handled is
- * lost (a timeout that could not be created never fires, a packet that could
- * not be sent is reported to the library as a send error), so callers should
- * treat the socket as unusable and {@link DcSctpSocketInterface#close} it.
+ * suppressed this way never receives {@code stop()} or {@code restart()}. The
+ * library's own state is kept consistent, but the information the failed callback
+ * would have handled is lost, and so is whatever the suppressed callbacks would
+ * have delivered: not only data (a timeout that could not be created never fires,
+ * a packet that could not be sent is reported to the library as a send error) but
+ * also state-change notifications such as {@link #OnAborted} or {@link #OnClosed},
+ * and a {@link Timeout} whose {@code restart()} was suppressed stays dead. Callers
+ * should therefore treat the socket as unusable and
+ * {@link DcSctpSocketInterface#close} it, without relying on further callbacks.
  */
 @ExposeToNative
 public interface DcSctpSocketCallbacks
