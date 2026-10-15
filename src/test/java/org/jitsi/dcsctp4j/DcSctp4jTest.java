@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -61,8 +62,10 @@ public class DcSctp4jTest {
         assertFalse(callbacks.failed);
     }
 
-    @Test @Disabled /* dcsctp is compiled with -fno-exceptions, so we can't throw through it. */
+    @Test
     public void testExceptionThroughJNI() {
+        // createTimeout is called from within dcsctp during create(); the wrapper must hold the
+        // exception until dcsctp returns and then surface it from create().
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
         Logger logger = new LoggerImpl("testException");
@@ -80,6 +83,302 @@ public class DcSctp4jTest {
                 );
         assertEquals("I'm not happy!", e.getMessage());
         assertFalse(callbacks.failed);
+    }
+
+    @Test
+    public void testCallbackExceptionSurfacesFromSocketMethod() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        Logger logger = new LoggerImpl("testCallbackException");
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null, false) {
+            @Override
+            public SendPacketStatus sendPacketWithStatus(@NotNull byte[] data) {
+                throw new IllegalStateException("cannot send");
+            }
+        };
+        wrapper.socket = factory.create("testCallbackException", callbacks, null, new DcSctpOptions());
+
+        // connect() sends INIT synchronously, so the callback throws inside dcsctp's processing
+        // of connect(); the exception must come out of connect() itself.
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> wrapper.socket.connect());
+        assertEquals("cannot send", e.getMessage());
+
+        // The socket is still usable enough to be shut down: close() does not send.
+        assertDoesNotThrow(() -> wrapper.socket.close());
+        assertEquals(SocketState.kClosed, wrapper.socket.state());
+        assertFalse(callbacks.failed);
+    }
+
+    /** Call counters shared by all CountingTimeouts of one socket. */
+    static class TimeoutCounters {
+        final AtomicInteger starts = new AtomicInteger(), stops = new AtomicInteger(), restarts = new AtomicInteger();
+        /** start() while running, or stop()/restart() while not running: Timeout's pairing promise broken. */
+        final AtomicInteger pairingViolations = new AtomicInteger();
+    }
+
+    /**
+     * A TestTimeout that counts its calls, checks Timeout's start/stop pairing, and can be made
+     * to throw from start() or stop(). A throwing call still counts as delivered: Java saw it.
+     */
+    static class CountingTimeout extends TestTimeout {
+        final TimeoutCounters counters;
+        final RuntimeException throwOnStart, throwOnStop;
+        boolean running;
+
+        CountingTimeout(SocketWrapper wrapper, TimeoutCounters counters,
+                        RuntimeException throwOnStart, RuntimeException throwOnStop) {
+            super(wrapper);
+            this.counters = counters;
+            this.throwOnStart = throwOnStart;
+            this.throwOnStop = throwOnStop;
+        }
+
+        @Override
+        public void start(long duration, long timeoutId) {
+            counters.starts.incrementAndGet();
+            if (running) {
+                counters.pairingViolations.incrementAndGet();
+            }
+            if (throwOnStart != null) {
+                throw throwOnStart;
+            }
+            running = true;
+            super.start(duration, timeoutId);
+        }
+
+        @Override
+        public void stop() {
+            counters.stops.incrementAndGet();
+            if (!running) {
+                counters.pairingViolations.incrementAndGet();
+            }
+            running = false;
+            if (throwOnStop != null) {
+                throw throwOnStop;
+            }
+            if (future != null) {
+                super.stop();
+            }
+        }
+
+        @Override
+        public void restart(long durationMs, long timeoutId) {
+            counters.restarts.incrementAndGet();
+            if (!running) {
+                counters.pairingViolations.incrementAndGet();
+            }
+            super.restart(durationMs, timeoutId);
+            running = true;
+        }
+
+        @Override
+        public void run() {
+            // Expiry ends the running period: dcsctp may then re-arm with a plain start().
+            running = false;
+            super.run();
+        }
+    }
+
+    private static TestCallbacks callbacksWithTimeouts(SocketWrapper wrapper, Logger logger, SocketWrapper dest,
+            TimeoutCounters counters, RuntimeException throwOnStart, RuntimeException throwOnStop) {
+        return new TestCallbacks(wrapper, Clock.systemUTC(), logger, dest, false) {
+            @Override
+            public Timeout createTimeout(@NotNull DelayPrecision precision) {
+                return new CountingTimeout(wrapper, counters, throwOnStart, throwOnStop);
+            }
+        };
+    }
+
+    @Test
+    public void testTimeoutStartExceptionLeavesTimeoutUnpaired() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        TimeoutCounters counters = new TimeoutCounters();
+        IllegalStateException boom = new IllegalStateException("no timers today");
+        TestCallbacks callbacks = callbacksWithTimeouts(wrapper, new LoggerImpl("testTimeoutStart"), null,
+                counters, boom, null);
+        wrapper.socket = factory.create("testTimeoutStart", callbacks, null, new DcSctpOptions());
+
+        // connect() starts the T1-init timer; start() throws, and the exception surfaces from connect().
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> wrapper.socket.connect());
+        assertSame(boom, e);
+        assertEquals(1, counters.starts.get(), "exactly one start() should have been attempted");
+
+        // The start never took effect on the Java side, so no stop() or restart() may follow it,
+        // including from close(), which stops dcsctp's timers.
+        assertDoesNotThrow(() -> wrapper.socket.close());
+        assertEquals(SocketState.kClosed, wrapper.socket.state());
+        assertEquals(0, counters.stops.get(), "no stop() without a successful start()");
+        assertEquals(0, counters.restarts.get(), "no restart() without a successful start()");
+        assertEquals(0, counters.pairingViolations.get());
+    }
+
+    @Test
+    public void testTimeoutStopExceptionSurfacesFromClose() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        TimeoutCounters counters = new TimeoutCounters();
+        IllegalStateException boom = new IllegalStateException("cannot stop");
+        TestCallbacks callbacks = callbacksWithTimeouts(wrapper, new LoggerImpl("testTimeoutStop"), null,
+                counters, null, boom);
+        wrapper.socket = factory.create("testTimeoutStop", callbacks, null, new DcSctpOptions());
+
+        wrapper.socket.connect();
+        assertEquals(1, counters.starts.get(), "connect() should start the T1-init timer");
+
+        // close() stops the running timer; stop() throws, and the exception surfaces from close().
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> wrapper.socket.close());
+        assertSame(boom, e);
+        assertEquals(1, counters.stops.get(), "only the started timer gets a stop()");
+        assertEquals(0, counters.pairingViolations.get());
+        // dcsctp finished closing regardless.
+        assertEquals(SocketState.kClosed, wrapper.socket.state());
+    }
+
+    /**
+     * On the normal path an expired timer is re-armed by dcsctp with Start(), which must reach
+     * Java as start(), not restart(): restart() is only for a timer Java still has running.
+     */
+    @Test
+    public void testExpiredTimerIsRearmedWithStart() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        TimeoutCounters counters = new TimeoutCounters();
+        // No peer: packets are reported as a temporary failure, so T1-init keeps expiring and
+        // being re-armed for its retransmissions.
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), new LoggerImpl("testRearm"),
+                null, false) {
+            @Override
+            public Timeout createTimeout(@NotNull DelayPrecision precision) {
+                return new CountingTimeout(wrapper, counters, null, null);
+            }
+
+            @Override
+            public SendPacketStatus sendPacketWithStatus(@NotNull byte[] data) {
+                return SendPacketStatus.kTemporaryFailure;
+            }
+        };
+        wrapper.socket = factory.create("testRearm", callbacks, null, new DcSctpOptions());
+
+        wrapper.socket.connect();
+        waitUntil(() -> counters.starts.get() >= 2, 5000);
+        assertTrue(counters.starts.get() >= 2, "T1-init should have expired and been re-armed");
+        assertEquals(0, counters.restarts.get(), "an expired timer is re-armed with start(), not restart()");
+        assertEquals(0, counters.pairingViolations.get());
+
+        wrapper.socket.close();
+        assertEquals(0, counters.pairingViolations.get());
+        assertFalse(callbacks.failed);
+    }
+
+    /**
+     * A callback exception suppresses the rest of dcsctp's callbacks for that call, including a
+     * timer stop(). Java then still has the timer scheduled while dcsctp considers it stopped;
+     * when dcsctp starts it again, the wrapper must not deliver a second start().
+     */
+    @Test
+    public void testSuppressedTimerStopKeepsPairing() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        ConnectedPair pair = new ConnectedPair();
+        TimeoutCounters counters = new TimeoutCounters();
+        pair.serverCallbacks = new TestCallbacks(pair.server, Clock.systemUTC(),
+                new LoggerImpl("suppressedStopServer"), pair.client, false);
+        pair.clientCallbacks = callbacksWithTimeouts(pair.client, new LoggerImpl("suppressedStopClient"),
+                pair.server, counters, null, null);
+        // The client's observer throws once, on the next received packet.
+        IllegalStateException boom = new IllegalStateException("observer failed once");
+        AtomicInteger observerThrows = new AtomicInteger();
+        PacketObserver observer = new PacketObserver() {
+            @Override
+            public void OnSentPacket(long now, @NotNull byte[] payload) {
+            }
+
+            @Override
+            public void OnReceivedPacket(long now, @NotNull byte[] payload) {
+                if (observerThrows.get() > 0 && observerThrows.decrementAndGet() == 0) {
+                    throw boom;
+                }
+            }
+        };
+        DcSctpOptions options = new DcSctpOptions();
+        pair.server.socket = factory.create("suppressedStopServer", pair.serverCallbacks, null, options);
+        pair.client.socket = factory.create("suppressedStopClient", pair.clientCallbacks, observer, options);
+        pair.client.socket.connect();
+        waitUntil(() -> pair.client.socket.state() == SocketState.kConnected
+                && pair.server.socket.state() == SocketState.kConnected, 2000);
+        assertEquals(SocketState.kConnected, pair.client.socket.state());
+
+        // Send a message; the server's SACK is the next packet the client receives. The observer
+        // throws on it, so dcsctp's stop() of the client's T3-rtx timer is suppressed, while dcsctp
+        // itself processes the SACK and considers the timer stopped.
+        observerThrows.set(1);
+        pair.client.socket.send(new DcSctpMessage((short) 0, 0, "one".getBytes(StandardCharsets.UTF_8)),
+                new SendOptions());
+        waitUntil(() -> pair.serverCallbacks.failed, 2000);
+        assertTrue(pair.serverCallbacks.failed, "the client's receivePacket should have thrown");
+        assertSame(boom, pair.serverCallbacks.lastError);
+
+        // The next send starts T3-rtx again: Java must see a restart(), not a second start().
+        pair.client.socket.send(new DcSctpMessage((short) 0, 0, "two".getBytes(StandardCharsets.UTF_8)),
+                new SendOptions());
+        waitUntil(() -> pair.serverCallbacks.messagesReceived.size() == 2, 2000);
+        assertEquals(2, pair.serverCallbacks.messagesReceived.size());
+        assertEquals(0, counters.pairingViolations.get(), "start()/stop()/restart() must stay paired");
+
+        pair.client.socket.close();
+        pair.server.socket.close();
+        assertEquals(0, counters.pairingViolations.get(), "close() must not unpair either");
+        assertFalse(pair.clientCallbacks.failed);
+    }
+
+    @Test
+    public void testPacketObserverExceptionSurfacesFromSocketMethod() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), new LoggerImpl("testObserver"), null, false);
+        IllegalStateException boom = new IllegalStateException("observer failed");
+        PacketObserver observer = new PacketObserver() {
+            @Override
+            public void OnSentPacket(long now, @NotNull byte[] payload) {
+                throw boom;
+            }
+
+            @Override
+            public void OnReceivedPacket(long now, @NotNull byte[] payload) {
+            }
+        };
+        wrapper.socket = factory.create("testObserver", callbacks, observer, new DcSctpOptions());
+
+        // connect() sends INIT; dcsctp reports it to the observer right after sendPacketWithStatus,
+        // so the packet has gone out when the observer throws. The exception surfaces from connect().
+        IllegalStateException e = assertThrows(IllegalStateException.class, () -> wrapper.socket.connect());
+        assertSame(boom, e);
+        assertDoesNotThrow(() -> wrapper.socket.close());
+        assertEquals(SocketState.kClosed, wrapper.socket.state());
+        assertFalse(callbacks.failed);
+    }
+
+    @Test
+    public void testPeerCallbackExceptionSurfacesFromReceivePacket() {
+        ConnectedPair pair = connectPair("peerCallbackException");
+
+        // The server's OnMessageReceived throws. The exception must surface from the server's
+        // receivePacket(), which the *client's* TestCallbacks invokes on the executor when it
+        // delivers the packet, so that is where it gets recorded.
+        IllegalStateException boom = new IllegalStateException("peer cannot handle message");
+        pair.serverCallbacks.throwOnMessageReceived = boom;
+        pair.client.socket.send(new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8)),
+                new SendOptions());
+        waitUntil(() -> pair.clientCallbacks.failed, 2000);
+
+        assertTrue(pair.clientCallbacks.failed, "the server's receivePacket should have thrown");
+        assertSame(boom, pair.clientCallbacks.lastError);
+        assertEquals(0, pair.serverCallbacks.messagesReceived.size());
+        // dcsctp itself is intact on both sides.
+        assertEquals(SocketState.kConnected, pair.server.socket.state());
+        assertEquals(SocketState.kConnected, pair.client.socket.state());
+        assertDoesNotThrow(() -> pair.server.socket.close());
+        assertDoesNotThrow(() -> pair.client.socket.close());
     }
 
     /** A connected client/server socket pair, with the callbacks each side was created with. */
@@ -385,6 +684,8 @@ public class DcSctp4jTest {
         test.testSocketCreate();
         System.out.println("Running testSimpleConnection");
         test.testSimpleConnection();
+        System.out.println("Running testExceptionThroughJNI");
+        test.testExceptionThroughJNI();
         System.out.println("Running testPullModeConnection");
         test.testPullModeConnection();
         System.out.println("Running testReceivePacketRejectsInvalidBounds");
@@ -397,8 +698,20 @@ public class DcSctp4jTest {
         test.testConnectWithConnectionToken();
         System.out.println("Running testGenerateConnectionTokenCallbackFailures");
         test.testGenerateConnectionTokenCallbackFailures();
-        /* System.out.println("Testing testExceptionThroughJNI");
-        test.testExceptionThroughJNI(); */
+        System.out.println("Running testTimeoutStartExceptionLeavesTimeoutUnpaired");
+        test.testTimeoutStartExceptionLeavesTimeoutUnpaired();
+        System.out.println("Running testTimeoutStopExceptionSurfacesFromClose");
+        test.testTimeoutStopExceptionSurfacesFromClose();
+        System.out.println("Running testSuppressedTimerStopKeepsPairing");
+        test.testSuppressedTimerStopKeepsPairing();
+        System.out.println("Running testExpiredTimerIsRearmedWithStart");
+        test.testExpiredTimerIsRearmedWithStart();
+        System.out.println("Running testPacketObserverExceptionSurfacesFromSocketMethod");
+        test.testPacketObserverExceptionSurfacesFromSocketMethod();
+        System.out.println("Running testCallbackExceptionSurfacesFromSocketMethod");
+        test.testCallbackExceptionSurfacesFromSocketMethod();
+        System.out.println("Running testPeerCallbackExceptionSurfacesFromReceivePacket");
+        test.testPeerCallbackExceptionSurfacesFromReceivePacket();
         DcSctp4jTest.executor.shutdown();
     }
 }
@@ -446,6 +759,10 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     private final SocketWrapper dest;
 
     public volatile boolean failed = false;
+    /** The exception that set {@link #failed}, if any. */
+    public volatile Throwable lastError;
+    /** If set, OnMessageReceived throws this instead of handling the message. */
+    public volatile RuntimeException throwOnMessageReceived;
     /** Messages received, whether delivered by OnMessageReceived or fetched after OnMessageReady. */
     public final List<DcSctpMessage> messagesReceived = Collections.synchronizedList(new ArrayList<>());
 
@@ -477,6 +794,9 @@ class TestCallbacks implements DcSctpSocketCallbacks {
                 try {
                     dest.socket.receivePacket(data, 0, data.length);
                 } catch (Exception e) {
+                    // Note: this records an exception thrown by the *peer's* callbacks, since it
+                    // surfaces from the peer's receivePacket(); see testPeerCallbackExceptionSurfacesFromReceivePacket.
+                    lastError = e;
                     failed = true;
                     logger.error("Error processing received packet", e);
                 }
@@ -509,6 +829,9 @@ class TestCallbacks implements DcSctpSocketCallbacks {
 
     @Override
     public void OnMessageReceived(@NotNull DcSctpMessage message) {
+        if (throwOnMessageReceived != null) {
+            throw throwOnMessageReceived;
+        }
         try {
             assertFalse(pullMode, "OnMessageReceived must not be called in pull mode");
             messagesReceived.add(message);

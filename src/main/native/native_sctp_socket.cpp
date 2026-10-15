@@ -26,22 +26,26 @@ using namespace dcsctp;
 using namespace std;
 
 NativeSctpSocket::NativeSctpSocket(jDcSctpSocketCallbacks jCallbacks) :
-    callbacks(jCallbacks)
+    callbacks(jCallbacks, exceptions)
 {
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::destruct(JNIEnv *env, jclass, jlong ptr)
 {
 NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
-    delete nativeSocket;
+    std::unique_ptr<NativeSctpSocket> nativeSocket((NativeSctpSocket*)(intptr_t)ptr);
+    /* Destroying the dcsctp socket stops its timers, which calls back into Java. This
+       runs from the Cleaner, so there is no caller to report an exception to; deliver
+       every stop() regardless and describe any exception rather than letting one
+       failure leave the other timers scheduled. */
+    nativeSocket->exceptions.beginBestEffort();
+    nativeSocket->socket.reset();
 NATIVE_EPILOG
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::receivePacket_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray data, jint offset, jint length)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     java_array_access aData(env, data);
     /* Validate without addition so nothing can overflow: once offset and length are
        both non-negative, size - offset cannot overflow, and length > size - offset
@@ -61,16 +65,14 @@ NATIVE_EPILOG
 
 jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::messagesReady_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     return nativeSocket->socket->MessagesReady();
 NATIVE_EPILOG_Z
 }
 
 jDcSctpMessage JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getNextMessage_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     auto msg = nativeSocket->socket->GetNextMessage();
     if (!msg) {
         return nullptr;
@@ -82,24 +84,21 @@ NATIVE_EPILOG_Z
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::handleTimeout_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jlong timeoutId)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     nativeSocket->socket->HandleTimeout(TimeoutID(timeoutId));
 NATIVE_EPILOG
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::connect_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     nativeSocket->socket->Connect();
 NATIVE_EPILOG
 }
 
 jboolean JNICALL DcSctpSocketFactory_NativeSctpSocket_class::connectWithConnectionToken_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray myData, jbyteArray peerData)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     java_array_access aMyData(env, myData);
     java_array_access aPeerData(env, peerData);
     /* As with receivePacket_, dcsctp copies what it needs, so the Java arrays can be exposed directly. */
@@ -111,24 +110,21 @@ NATIVE_EPILOG_Z
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::shutdown_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     nativeSocket->socket->Shutdown();
 NATIVE_EPILOG
 }
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::close_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     nativeSocket->socket->Close();
 NATIVE_EPILOG
 }
 
 jSocketState JNICALL DcSctpSocketFactory_NativeSctpSocket_class::state_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     auto status = nativeSocket->socket->state();
     return enum_members::get<SocketState_members>().map(env, status);
 NATIVE_EPILOG_Z
@@ -136,9 +132,11 @@ NATIVE_EPILOG_Z
 
 jDcSctpOptions JNICALL DcSctpSocketFactory_NativeSctpSocket_class::options_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     auto options = make_unique<DcSctpOptions>(nativeSocket->socket->options());
+    /* As in create_: rethrow before the return expression gives up ownership, since the
+       guard only runs afterwards and would leak what release() handed out. */
+    nativeSocket->exceptions.rethrow();
     auto jOptions = java_classes::get<DcSctpOptions_class>().ctor(env, (jlong)(intptr_t)options.release());
     return jOptions.release();
 NATIVE_EPILOG_Z
@@ -146,24 +144,21 @@ NATIVE_EPILOG_Z
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::setStreamPriority_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId, jshort streamPriority)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     nativeSocket->socket->SetStreamPriority(StreamID(streamId), StreamPriority(streamPriority));
 NATIVE_EPILOG
 }
 
 jshort JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getStreamPriority_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
     return *nativeSocket->socket->GetStreamPriority(StreamID(streamId));
 NATIVE_EPILOG_Z
 }
 
 jint JNICALL DcSctpSocketFactory_NativeSctpSocket_class::send_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jbyteArray payload, jint ppid, jshort streamID, jboolean isUnordered, jLong lifetime, jLong maxRetransmissions, jlong lifecycleId)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
 
     java_array_access aPayload(env, payload);
     vector<uint8_t> vPayload(aPayload.cbegin(), aPayload.cend());
@@ -189,8 +184,7 @@ NATIVE_EPILOG_Z
 
 jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::bufferedAmount_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
 
     return nativeSocket->socket->buffered_amount(StreamID(streamId));
 NATIVE_EPILOG_Z
@@ -198,8 +192,7 @@ NATIVE_EPILOG_Z
 
 jlong JNICALL DcSctpSocketFactory_NativeSctpSocket_class::bufferedAmountLowThreshold_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
 
     return nativeSocket->socket->buffered_amount_low_threshold(StreamID(streamId));
 NATIVE_EPILOG_Z
@@ -207,8 +200,7 @@ NATIVE_EPILOG_Z
 
 void JNICALL DcSctpSocketFactory_NativeSctpSocket_class::setBufferedAmountLowThreshold_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr, jshort streamId, jlong bytes)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
 
     nativeSocket->socket->SetBufferedAmountLowThreshold(StreamID(streamId), bytes);
 NATIVE_EPILOG
@@ -216,14 +208,14 @@ NATIVE_EPILOG
 
 jMetrics JNICALL DcSctpSocketFactory_NativeSctpSocket_class::getMetrics_(JNIEnv* env, jDcSctpSocketFactory_NativeSctpSocket, jlong ptr)
 {
-NATIVE_PROLOG
-    auto nativeSocket = (NativeSctpSocket*)(intptr_t)ptr;
+SOCKET_PROLOG(ptr)
 
     auto metrics = nativeSocket->socket->GetMetrics();
     if (!metrics) {
         return nullptr;
     }
     auto metricsP = make_unique<Metrics>(*metrics);
+    nativeSocket->exceptions.rethrow();  /* see options_ */
     return java_classes::get<Metrics_class>().ctor(env, (jlong)(intptr_t)metricsP.release()).release();
 NATIVE_EPILOG_Z
 }

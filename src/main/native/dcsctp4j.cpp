@@ -27,6 +27,28 @@ using namespace smjni;
 using namespace dcsctp;
 using namespace std;
 
+void describe_exception(JNIEnv* env, std::exception_ptr ex) noexcept
+{
+    try {
+        try {
+            std::rethrow_exception(ex);
+        }
+        catch (java_exception& jex) {
+            jex.raise(env);
+        }
+        catch (std::exception& e) {
+            java_exception::translate(env, e);
+        }
+        catch (...) {
+            java_exception::translate(env, std::runtime_error("unknown C++ exception"));
+        }
+        env->ExceptionDescribe();
+    }
+    catch (...) {
+        /* raise() throws if the JVM refuses the Throw; there is nothing left to do. */
+    }
+}
+
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     try
@@ -79,7 +101,7 @@ NATIVE_PROLOG
 
     unique_ptr<PacketObserver> packetObserver;
     if (jPacketObserver != nullptr) {
-        packetObserver = make_unique<WrappedPacketObserver>(jPacketObserver);
+        packetObserver = make_unique<WrappedPacketObserver>(jPacketObserver, nativeSocket->exceptions);
     }
     else {
         packetObserver = nullptr;
@@ -88,6 +110,11 @@ NATIVE_PROLOG
     DcSctpOptions* options = (DcSctpOptions*)(intptr_t)java_classes::get<DcSctpOptions_class>().get_ptr(env, jOptions);
 
     nativeSocket->socket = factory->Create(logPrefix, nativeSocket->callbacks, std::move(packetObserver), *options);
+
+    /* Create() already calls back into Java (CreateTimeout). Rethrow explicitly rather
+       than through a PendingExceptionGuard: the guard would fire during the return,
+       after release() has given up ownership, and the socket would leak. */
+    nativeSocket->exceptions.rethrow();
 
     return (jlong)(intptr_t)nativeSocket.release();
 NATIVE_EPILOG_Z
@@ -102,27 +129,17 @@ NATIVE_PROLOG
 
     auto & operatorClass = java_classes::get<LongBinaryOperator_class>();
     /* GenerateConnectionToken calls this synchronously, so env stays valid for the duration.
-       dcsctp is compiled without exception support, so an exception from the Java callback
-       must not unwind through it: hold it and rethrow once dcsctp has returned. The range of
-       the result is validated by the Java wrapper, DcSctpSocketFactory.generateConnectionToken. */
-    std::exception_ptr pending;
-    auto getRandomInt = [env, &operatorClass, jGetRandomInt, &pending](uint32_t low, uint32_t high) -> uint32_t {
-        if (pending) {
-            return low;
-        }
-        try {
+       As with the socket callbacks, an exception from Java must not unwind through dcsctp. The
+       range of the result is validated by the Java wrapper, DcSctpSocketFactory.generateConnectionToken. */
+    CallbackExceptionSink exceptions;
+    PendingExceptionGuard pendingExceptionGuard(exceptions);
+    auto getRandomInt = [&](uint32_t low, uint32_t high) -> uint32_t {
+        return exceptions.call([&]() -> uint32_t {
             return static_cast<uint32_t>(operatorClass.applyAsLong(env, jGetRandomInt, low, high));
-        }
-        catch (...) {
-            pending = std::current_exception();
-            return low;
-        }
+        }, low);
     };
 
     vector<uint8_t> token = factory->GenerateConnectionToken(*options, getRandomInt);
-    if (pending) {
-        std::rethrow_exception(pending);
-    }
 
     return java_array_create<jbyte>(env, token.begin(), token.end()).release();
 NATIVE_EPILOG_Z

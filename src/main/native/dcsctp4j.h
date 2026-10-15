@@ -18,6 +18,8 @@
 #define DCSCTP4J_H
 
 #include <smjni/smjni.h>
+#include <exception>
+#include <stdexcept>
 #include "all_classes.h"
 #include "extra_classes.h"
 #include "enum_members.h"
@@ -25,6 +27,13 @@
 #include "wrapped_objects.h"
 
 using java_classes = smjni::java_class_table<JNIGEN_ALL_GENERATED_CLASSES, EXTRA_CLASSES>;
+
+/*
+ * Reports an exception where there is no Java caller to throw it to: raises it on
+ * env (translating a C++ exception to a Java one), prints it with ExceptionDescribe
+ * and clears it. Never throws; if the JVM refuses the Throw the exception is dropped.
+ */
+void describe_exception(JNIEnv* env, std::exception_ptr ex) noexcept;
 
 #define NATIVE_PROLOG  try {
 #define NATIVE_EPILOG  } \
@@ -35,6 +44,11 @@ using java_classes = smjni::java_class_table<JNIGEN_ALL_GENERATED_CLASSES, EXTRA
                        catch(std::exception & ex)\
                        {\
                            java_exception::translate(env, ex);\
+                       }\
+                       catch(...)\
+                       {\
+                           /* Not a std::exception: still better reported to Java than escaping JNI. */\
+                           java_exception::translate(env, std::runtime_error("unknown C++ exception"));\
                        }
 
 /* Compilers will complain if functions returning a value don't return anything, even though the value returned doesn't
