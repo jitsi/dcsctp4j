@@ -134,6 +134,9 @@ jDcSctpOptions JNICALL DcSctpSocketFactory_NativeSctpSocket_class::options_(JNIE
 {
 SOCKET_PROLOG(ptr)
     auto options = make_unique<DcSctpOptions>(nativeSocket->socket->options());
+    /* As in create_: rethrow before the return expression gives up ownership, since the
+       guard only runs afterwards and would leak what release() handed out. */
+    nativeSocket->exceptions.rethrow();
     auto jOptions = java_classes::get<DcSctpOptions_class>().ctor(env, (jlong)(intptr_t)options.release());
     return jOptions.release();
 NATIVE_EPILOG_Z
@@ -212,6 +215,7 @@ SOCKET_PROLOG(ptr)
         return nullptr;
     }
     auto metricsP = make_unique<Metrics>(*metrics);
+    nativeSocket->exceptions.rethrow();  /* see options_ */
     return java_classes::get<Metrics_class>().ctor(env, (jlong)(intptr_t)metricsP.release()).release();
 NATIVE_EPILOG_Z
 }

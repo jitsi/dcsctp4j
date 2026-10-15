@@ -63,8 +63,9 @@ void LogProxy::OnLogMessage(const LogLineRef& line)
        escape from here: a Java exception (from the handler, or from building the
        strings) is described to stderr and dropped. Logging it through WebRTC would
        re-enter this sink. */
-    JNIEnv* env = jni_provider::get_jni();
+    JNIEnv* env = nullptr;
     try {
+        env = jni_provider::get_jni();
         auto message = jstring_from(env, line.message());
         auto filename = jstring_from(env, line.filename());
         jint lineNo = line.line();
@@ -74,24 +75,11 @@ void LogProxy::OnLogMessage(const LogLineRef& line)
 
         java_classes::get<LogProxy_class>().onLogMessage(env, logProxy, message, filename, lineNo, threadId, timestampUs, severity);
     }
-    catch (java_exception& ex) {
-        try {
-            ex.raise(env);
-            env->ExceptionDescribe();
-        }
-        catch (...) {
-            /* raise() throws if the JVM refuses the Throw; swallow it, we are inside noexcept. */
-        }
-    }
-    catch (std::exception& ex) {
-        try {
-            java_exception::translate(env, ex);
-            env->ExceptionDescribe();
-        }
-        catch (...) {
-        }
-    }
     catch (...) {
+        if (env != nullptr) {
+            describe_exception(env, std::current_exception());
+        }
+        /* Without a JNIEnv there is nowhere to report it. */
     }
 }
 

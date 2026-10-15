@@ -26,25 +26,11 @@ using namespace std;
 void CallbackExceptionSink::report(std::exception_ptr ex) noexcept
 {
     try {
-        std::rethrow_exception(ex);
-    }
-    catch (java_exception& jex) {
-        try {
-            JNIEnv* env = jni_provider::get_jni();
-            /* Prints the exception and its stack trace to stderr, and clears it. */
-            jex.raise(env);
-            env->ExceptionDescribe();
-        }
-        catch (...) {
-            /* raise() throws if the JVM refuses the Throw; nothing more can be done here. */
-            RTC_LOG(LS_ERROR) << "Could not describe a Java exception raised during socket teardown";
-        }
-    }
-    catch (std::exception& e) {
-        RTC_LOG(LS_ERROR) << "Exception from a Java callback during socket teardown: " << e.what();
+        describe_exception(jni_provider::get_jni(), ex);
     }
     catch (...) {
-        RTC_LOG(LS_ERROR) << "Unknown exception from a Java callback during socket teardown";
+        /* No JNIEnv for this thread: nothing more can be done with the exception. */
+        RTC_LOG(LS_ERROR) << "Could not report an exception from a Java callback during socket teardown";
     }
 }
 
@@ -118,11 +104,15 @@ void WrappedTimeout::Stop()
     if (!started) {
         return;
     }
+    /* dcsctp considers the timer stopped from here on whether or not Java's stop()
+       succeeds, so record that before the call: a later Start() must deliver a fresh
+       start() rather than a second one, and a failed stop() must not be retried as an
+       unpaired stop() later. */
+    started = false;
     exceptions.call([&] {
         JNIEnv* env = jni_provider::get_jni();
 
         timeoutClass.stop(env, timeout);
-        started = false;
     });
 }
 
@@ -133,10 +123,15 @@ void WrappedTimeout::Restart(DurationMs duration, TimeoutID timeout_id)
         Start(duration, timeout_id);
         return;
     }
+    /* Java's default restart() is stop() followed by start(); if it throws we cannot
+       know which half ran, so treat the timer as stopped and let the next Start()
+       pair things up again. */
+    started = false;
     exceptions.call([&] {
         JNIEnv* env = jni_provider::get_jni();
 
         timeoutClass.restart(env, timeout, *duration, *timeout_id);
+        started = true;
     });
 }
 

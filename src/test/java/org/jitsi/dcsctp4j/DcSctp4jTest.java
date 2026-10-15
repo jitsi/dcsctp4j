@@ -579,6 +579,10 @@ public class DcSctp4jTest {
         test.testTimeoutStopExceptionSurfacesFromClose();
         System.out.println("Running testPacketObserverExceptionSurfacesFromSocketMethod");
         test.testPacketObserverExceptionSurfacesFromSocketMethod();
+        System.out.println("Running testCallbackExceptionSurfacesFromSocketMethod");
+        test.testCallbackExceptionSurfacesFromSocketMethod();
+        System.out.println("Running testPeerCallbackExceptionSurfacesFromReceivePacket");
+        test.testPeerCallbackExceptionSurfacesFromReceivePacket();
         DcSctp4jTest.executor.shutdown();
     }
 }

@@ -27,6 +27,28 @@ using namespace smjni;
 using namespace dcsctp;
 using namespace std;
 
+void describe_exception(JNIEnv* env, std::exception_ptr ex) noexcept
+{
+    try {
+        try {
+            std::rethrow_exception(ex);
+        }
+        catch (java_exception& jex) {
+            jex.raise(env);
+        }
+        catch (std::exception& e) {
+            java_exception::translate(env, e);
+        }
+        catch (...) {
+            java_exception::translate(env, std::runtime_error("unknown C++ exception"));
+        }
+        env->ExceptionDescribe();
+    }
+    catch (...) {
+        /* raise() throws if the JVM refuses the Throw; there is nothing left to do. */
+    }
+}
+
 JNIEXPORT jint JNI_OnLoad(JavaVM *vm, void *reserved)
 {
     try

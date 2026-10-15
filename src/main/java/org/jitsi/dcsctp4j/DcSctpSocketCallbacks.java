@@ -33,7 +33,10 @@ import smjni.jnigen.*;
  * processing, and is then thrown from the {@link DcSctpSocketInterface} method
  * whose processing invoked the callback (or from
  * {@link DcSctpSocketFactory#create}, which already invokes {@link #createTimeout}
- * and {@link #Now}). No further callbacks are invoked for that method call once
+ * and {@link #Now}). That method's own effect on the library has already taken
+ * place by then: a {@code send()} whose packet callback threw has still queued the
+ * message, and a {@code resetStreams()} has still requested the reset, so the
+ * exception does not mean the operation was not performed. No further callbacks are invoked for that method call once
  * one has thrown; in particular a {@link Timeout} whose {@code start()} was
  * suppressed this way never receives {@code stop()} or {@code restart()}. The
  * library's own state is kept consistent, but the information the failed callback

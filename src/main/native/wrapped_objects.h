@@ -78,7 +78,14 @@ public:
      * (ExceptionDescribe) and dropped rather than held. Used when there is no caller
      * to rethrow to, so that every timer gets its stop().
      */
-    void beginBestEffort() { bestEffort_ = true; }
+    void beginBestEffort()
+    {
+        bestEffort_ = true;
+        /* An exception still held from before has no caller left to go to: report it now. */
+        if (pending_) {
+            report(std::exchange(pending_, nullptr));
+        }
+    }
 
     /* Rethrows and clears the pending exception, if any. */
     void rethrow()
