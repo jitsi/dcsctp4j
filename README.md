@@ -48,7 +48,9 @@ available, and WebRTC's gn build files also pass flags that only its own clang u
 distribution clang cannot drive the gn build either. A non-x86 host can still build its own
 architecture with `resources/Makefile` and a native clang pointed at the matching WebRTC
 sysroot, which is the path ppc64le uses on x86 hosts too; see the Makefile for the variables it
-takes. Running the x86-64 clang under `qemu-user` is not an option: it miscompiles.
+takes. Running the x86-64 clang under `qemu-user` did not work for us (the build completed, but
+the resulting library hung at load time inside Abseil); we did not investigate why, so it may be
+fixable, but it is not a recommended path.
 
 * Clone the project
 * Update the SimpleJNI subproject with
