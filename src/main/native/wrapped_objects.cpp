@@ -29,10 +29,16 @@ void CallbackExceptionSink::report(std::exception_ptr ex) noexcept
         std::rethrow_exception(ex);
     }
     catch (java_exception& jex) {
-        JNIEnv* env = jni_provider::get_jni();
-        /* Prints the exception and its stack trace to stderr, and clears it. */
-        jex.raise(env);
-        env->ExceptionDescribe();
+        try {
+            JNIEnv* env = jni_provider::get_jni();
+            /* Prints the exception and its stack trace to stderr, and clears it. */
+            jex.raise(env);
+            env->ExceptionDescribe();
+        }
+        catch (...) {
+            /* raise() throws if the JVM refuses the Throw; nothing more can be done here. */
+            RTC_LOG(LS_ERROR) << "Could not describe a Java exception raised during socket teardown";
+        }
     }
     catch (std::exception& e) {
         RTC_LOG(LS_ERROR) << "Exception from a Java callback during socket teardown: " << e.what();

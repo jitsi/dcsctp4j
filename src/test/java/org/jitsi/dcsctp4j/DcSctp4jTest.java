@@ -224,7 +224,8 @@ public class DcSctp4jTest {
         };
         wrapper.socket = factory.create("testObserver", callbacks, observer, new DcSctpOptions());
 
-        // connect() sends INIT, which the observer sees first; its exception surfaces from connect().
+        // connect() sends INIT; dcsctp reports it to the observer right after sendPacketWithStatus,
+        // so the packet has gone out when the observer throws. The exception surfaces from connect().
         IllegalStateException e = assertThrows(IllegalStateException.class, () -> wrapper.socket.connect());
         assertSame(boom, e);
         assertDoesNotThrow(() -> wrapper.socket.close());

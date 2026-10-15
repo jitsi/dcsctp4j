@@ -75,12 +75,23 @@ void LogProxy::OnLogMessage(const LogLineRef& line)
         java_classes::get<LogProxy_class>().onLogMessage(env, logProxy, message, filename, lineNo, threadId, timestampUs, severity);
     }
     catch (java_exception& ex) {
-        ex.raise(env);
-        env->ExceptionDescribe();
+        try {
+            ex.raise(env);
+            env->ExceptionDescribe();
+        }
+        catch (...) {
+            /* raise() throws if the JVM refuses the Throw; swallow it, we are inside noexcept. */
+        }
     }
     catch (std::exception& ex) {
-        java_exception::translate(env, ex);
-        env->ExceptionDescribe();
+        try {
+            java_exception::translate(env, ex);
+            env->ExceptionDescribe();
+        }
+        catch (...) {
+        }
+    }
+    catch (...) {
     }
 }
 
