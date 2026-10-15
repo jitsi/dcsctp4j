@@ -179,7 +179,8 @@ public class DcSctpSocketFactory
             SocketState state = state();
             if (state != SocketState.kClosed)
             {
-                throw new IllegalStateException("connectWithConnectionToken requires a closed socket, state is " + state);
+                throw new IllegalStateException(
+                        "connectWithConnectionToken requires a closed socket, state is " + state);
             }
             return connectWithConnectionToken_(ptr, myData, peerData);
         }
