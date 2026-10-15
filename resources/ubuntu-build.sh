@@ -27,17 +27,22 @@ case $ARCH in
         JNAARCH=x86-64
         DEBARCH=x86_64
         GN_ARCH=x64
+        SYSROOT_ARCH=amd64
+        CLANG_TARGET=x86_64-linux-gnu
         ;;
     "arm64"|"aarch64")
         JNAARCH=aarch64
         DEBARCH=arm64
         GN_ARCH=arm64
+        SYSROOT_ARCH=arm64
+        CLANG_TARGET=aarch64-linux-gnu
         ;;
     "ppc64le")
         JNAARCH=ppc64le
         DEBARCH=ppc64el
         GN_ARCH=ppc64le
-        GNU_ARCH=powerpc64le
+        SYSROOT_ARCH=ppc64el
+        CLANG_TARGET=powerpc64le-linux-gnu
         ;;
     *)
 	echo "ERROR: Unsupported arch $ARCH"
@@ -61,11 +66,13 @@ else
     DEBUG_CMAKE_BUILD_TYPE=RelWithDebInfo
 fi
 
-NATIVEDEBARCH=$(dpkg --print-architecture)
-
-if [ $DEBARCH != $NATIVEDEBARCH -a -f "cmake/$DEBARCH-linux-gnu.cmake" ]; then
-    TOOLCHAIN_FILE="cmake/$DEBARCH-linux-gnu.cmake"
-fi
+# Both dcsctp and the JNI wrapper are compiled with the clang that WebRTC's
+# checkout provides, against WebRTC's Debian sysroot for the target. The host
+# distribution's compiler and glibc therefore do not affect the result: the
+# libraries require the sysroot's glibc and libstdc++ (Debian bullseye) at most.
+WEBRTC_CLANG_BIN=third_party/llvm-build/Release+Asserts/bin
+# The Debian release of WebRTC's sysroots (see build/linux/sysroot_scripts/sysroots.json).
+SYSROOT_RELEASE=bullseye
 
 NCPU=$(nproc)
 if [ -n "$NCPU" -a "$NCPU" -gt 1 ]
@@ -77,6 +84,14 @@ if test \! -d $WEBRTC_DIR/.git -a -r $WEBRTC_DIR/.gclient -a -d $WEBRTC_DIR/src/
     # They specified the WebRTC gclient directory, not the src checkout subdirectory
     WEBRTC_DIR=$WEBRTC_DIR/src
 fi
+# The compiler, sysroot and object paths derived from it are used from other directories.
+WEBRTC_DIR=$(cd "$WEBRTC_DIR" && pwd)
+
+if [ "$(uname -m)" != "x86_64" ]; then
+    echo "ERROR: the Linux build needs an x86-64 host: WebRTC's clang is only shipped as an x86-64 binary." >&2
+    echo "On other hosts, build libdcsctp with resources/Makefile and a native clang; see README.md." >&2
+    exit 1
+fi
 
 WEBRTC_BUILD=out/linux-$GN_ARCH
 WEBRTC_OBJ=$WEBRTC_DIR/$WEBRTC_BUILD
@@ -87,9 +102,10 @@ startdir=$PWD
 
 cd $WEBRTC_DIR
 rm -rf $WEBRTC_BUILD
+./build/linux/sysroot_scripts/install-sysroot.py --arch=$SYSROOT_ARCH
+WEBRTC_SYSROOT=$WEBRTC_DIR/build/linux/debian_${SYSROOT_RELEASE}_${SYSROOT_ARCH}-sysroot
 if test "$USE_MAKEFILE" != "BUILD_DCSCTP_WITH_MAKEFILE"; then
-    ./build/linux/sysroot_scripts/install-sysroot.py --arch=$GN_ARCH
-    gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2"
+    gn gen $WEBRTC_BUILD --args="use_custom_libcxx=false target_cpu=\"$GN_ARCH\" is_debug=$DEBUG_GN symbol_level=2 use_lld=false"
     ninja $VERBOSE_NINJA -C $WEBRTC_BUILD dcsctp
 else
     make $MAKE_ARGS -C $startdir/resources \
@@ -97,8 +113,8 @@ else
         OBJDIR="$WEBRTC_OBJ/obj" \
         $VERBOSE_MAKE \
         $DEBUG_MAKE \
-        CXX=${GNU_ARCH}-linux-gnu-g++ \
-        AR=${GNU_ARCH}-linux-gnu-ar
+        CXX="$WEBRTC_DIR/$WEBRTC_CLANG_BIN/clang++ --target=$CLANG_TARGET --sysroot=$WEBRTC_SYSROOT" \
+        AR=$WEBRTC_DIR/$WEBRTC_CLANG_BIN/llvm-ar
 fi
 
 cd $startdir
@@ -114,7 +130,9 @@ cmake -B cmake-build-linux-"$DEBARCH" \
     -DCMAKE_INSTALL_PREFIX="src/main/resources/linux-$JNAARCH" \
     -DWEBRTC_DIR="$WEBRTC_DIR" \
     -DWEBRTC_OBJ="$WEBRTC_OBJ" \
-    -DCMAKE_TOOLCHAIN_FILE:PATH="$TOOLCHAIN_FILE" \
+    -DCMAKE_TOOLCHAIN_FILE:PATH=cmake/webrtc-clang.cmake \
+    -DWEBRTC_CLANG_TARGET="$CLANG_TARGET" \
+    -DWEBRTC_SYSROOT="$WEBRTC_SYSROOT" \
     $DEBUG_CMAKE \
     -DCMAKE_BUILD_TYPE=$DEBUG_CMAKE_BUILD_TYPE
 

@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.*;
@@ -52,11 +53,12 @@ public class DcSctp4jTest {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
         Logger logger = new LoggerImpl("testSocketCreate");
-        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null);
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null, false);
         DcSctpOptions options = new DcSctpOptions();
 
         wrapper.socket = factory.create("testSocketCreate", callbacks, null, options);
         assertNotNull(wrapper.socket);
+        assertFalse(callbacks.failed);
     }
 
     @Test @Disabled /* dcsctp is compiled with -fno-exceptions, so we can't throw through it. */
@@ -64,7 +66,7 @@ public class DcSctp4jTest {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
         Logger logger = new LoggerImpl("testException");
-        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null) {
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null, false) {
             @Override
             public Timeout createTimeout(@NotNull DelayPrecision precision) {
                 throw new IllegalStateException("I'm not happy!");
@@ -77,7 +79,7 @@ public class DcSctp4jTest {
                 "Expected exception to be successfully thrown through JNI"
                 );
         assertEquals("I'm not happy!", e.getMessage());
-
+        assertFalse(callbacks.failed);
     }
 
     /** A connected client/server socket pair, with the callbacks each side was created with. */
@@ -93,6 +95,10 @@ public class DcSctp4jTest {
      * and waits for both sides to report the connection established.
      */
     private ConnectedPair connectPair(String name) {
+        return connectPair(name, false);
+    }
+
+    private ConnectedPair connectPair(String name, boolean pullMode) {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         ConnectedPair pair = new ConnectedPair();
 
@@ -101,9 +107,10 @@ public class DcSctp4jTest {
         Logger serverLogger = new LoggerImpl(this.getClass().getName() + "." + name + "Server");
         serverLogger.addContext("name", name + "Server");
 
-        pair.clientCallbacks = new TestCallbacks(pair.client, Clock.systemUTC(), clientLogger, pair.server);
-        pair.serverCallbacks = new TestCallbacks(pair.server, Clock.systemUTC(), serverLogger, pair.client);
+        pair.clientCallbacks = new TestCallbacks(pair.client, Clock.systemUTC(), clientLogger, pair.server, pullMode);
+        pair.serverCallbacks = new TestCallbacks(pair.server, Clock.systemUTC(), serverLogger, pair.client, pullMode);
         DcSctpOptions options = new DcSctpOptions();
+        options.setEnableReceivePullMode(pullMode);
 
         pair.server.socket = factory.create(name + "Server", pair.serverCallbacks, null, options);
         pair.client.socket = factory.create(name + "Client", pair.clientCallbacks, null, options);
@@ -118,7 +125,16 @@ public class DcSctp4jTest {
 
     @Test
     public void testSimpleConnection() {
-        ConnectedPair pair = connectPair("simpleConnection");
+        testConnection(false);
+    }
+
+    @Test
+    public void testPullModeConnection() {
+        testConnection(true);
+    }
+
+    private void testConnection(boolean pullMode) {
+        ConnectedPair pair = connectPair(pullMode ? "pullModeConnection" : "pushModeConnection", pullMode);
         SocketWrapper client = pair.client;
         SocketWrapper server = pair.server;
 
@@ -127,13 +143,13 @@ public class DcSctp4jTest {
         client.socket.send(message, sendOptions);
         waitUntil(() -> !pair.serverCallbacks.messagesReceived.isEmpty(), 2000);
 
-        assertEquals(1, pair.serverCallbacks.messagesReceived.size(), "server should receive the message");
+        assertEquals(1, pair.serverCallbacks.messagesReceived.size(),
+                "server should have received the message via " + (pullMode ? "OnMessageReady" : "OnMessageReceived"));
         DcSctpMessage received = pair.serverCallbacks.messagesReceived.get(0);
         assertEquals(0, received.getStreamID());
         assertEquals(0, received.getPpid());
         assertArrayEquals("Hello".getBytes(StandardCharsets.UTF_8), received.getPayload());
         assertEquals(0, pair.clientCallbacks.messagesReceived.size(), "client should not receive anything");
-
         assertEquals(SocketState.kConnected, client.socket.state());
         assertEquals(SocketState.kConnected, server.socket.state());
 
@@ -143,6 +159,9 @@ public class DcSctp4jTest {
 
         assertEquals(SocketState.kClosed, client.socket.state());
         assertEquals(SocketState.kClosed, server.socket.state());
+
+        assertFalse(pair.clientCallbacks.failed);
+        assertFalse(pair.serverCallbacks.failed);
     }
 
     /** Invalid (offset, length) pairs for a 64-byte array. */
@@ -160,7 +179,7 @@ public class DcSctp4jTest {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
         Logger logger = new LoggerImpl("testReceivePacketRejectsInvalidBounds");
-        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null);
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null, false);
         wrapper.socket = factory.create("testReceivePacketRejectsInvalidBounds", callbacks, null, new DcSctpOptions());
 
         byte[] data = new byte[64];
@@ -185,7 +204,7 @@ public class DcSctp4jTest {
         DcSctpSocketFactory factory = new DcSctpSocketFactory();
         SocketWrapper wrapper = new SocketWrapper();
         Logger logger = new LoggerImpl("testNativeReceivePacketRejectsInvalidBounds");
-        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null);
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), logger, null, false);
         wrapper.socket = factory.create("testNativeReceivePacketRejectsInvalidBounds", callbacks, null, new DcSctpOptions());
 
         Class<?> clazz = wrapper.socket.getClass();
@@ -219,9 +238,11 @@ public class DcSctp4jTest {
         // Use stream 3 so that it exists on both sides before resetting it.
         DcSctpMessage message = new DcSctpMessage((short) 3, 0, "Hello".getBytes(StandardCharsets.UTF_8));
         client.socket.send(message, new SendOptions());
-        waitUntil(() -> !serverCallbacks.messagesReceived.isEmpty(), 2000);
+        // The reset is only performed, not deferred, once the message has been delivered and acked.
+        waitUntil(() -> !serverCallbacks.messagesReceived.isEmpty() && client.socket.bufferedAmount((short) 3) == 0, 2000);
         assertEquals(1, serverCallbacks.messagesReceived.size(), "server should receive the message on stream 3");
         assertEquals(3, serverCallbacks.messagesReceived.get(0).getStreamID());
+        sleep(50);
 
         ResetStreamsStatus status = client.socket.resetStreams(Collections.singletonList((short) 3));
         assertEquals(ResetStreamsStatus.kPerformed, status);
@@ -258,6 +279,97 @@ public class DcSctp4jTest {
         }
     }
 
+    @Test
+    public void testConnectWithConnectionToken() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        ConnectedPair pair = new ConnectedPair();
+        Logger clientLogger = new LoggerImpl(this.getClass().getName() + ".tokenClient");
+        Logger serverLogger = new LoggerImpl(this.getClass().getName() + ".tokenServer");
+        pair.clientCallbacks = new TestCallbacks(pair.client, Clock.systemUTC(), clientLogger, pair.server, false);
+        pair.serverCallbacks = new TestCallbacks(pair.server, Clock.systemUTC(), serverLogger, pair.client, false);
+        DcSctpOptions options = new DcSctpOptions();
+
+        pair.server.socket = factory.create("tokenServer", pair.serverCallbacks, null, options);
+        pair.client.socket = factory.create("tokenClient", pair.clientCallbacks, null, options);
+
+        // Out-of-band connection: each side generates a token, the tokens are exchanged
+        // out of band, and each side finishes the connection with both tokens.
+        byte[] clientToken = factory.generateConnectionToken(options,
+                (low, high) -> ThreadLocalRandom.current().nextLong(low, high));
+        byte[] serverToken = factory.generateConnectionToken(options,
+                (low, high) -> ThreadLocalRandom.current().nextLong(low, high));
+        assertTrue(clientToken.length > 0);
+        assertTrue(serverToken.length > 0);
+        assertFalse(Arrays.equals(clientToken, serverToken), "tokens should carry different random tags");
+
+        // Garbage is rejected without connecting.
+        assertFalse(pair.client.socket.connectWithConnectionToken(new byte[]{1, 2, 3}, serverToken));
+        assertEquals(SocketState.kClosed, pair.client.socket.state());
+
+        assertTrue(pair.client.socket.connectWithConnectionToken(clientToken, serverToken));
+        assertTrue(pair.server.socket.connectWithConnectionToken(serverToken, clientToken));
+        assertEquals(SocketState.kConnected, pair.client.socket.state());
+        assertEquals(SocketState.kConnected, pair.server.socket.state());
+
+        // Connecting again on a connected socket is a programming error, not a token problem.
+        assertThrows(IllegalStateException.class,
+                () -> pair.client.socket.connectWithConnectionToken(clientToken, serverToken));
+
+        // The association works: a message gets through and the sockets stay connected.
+        DcSctpMessage message = new DcSctpMessage((short) 0, 0, "Hello".getBytes(StandardCharsets.UTF_8));
+        pair.client.socket.send(message, new SendOptions());
+        waitUntil(() -> !pair.serverCallbacks.messagesReceived.isEmpty(), 2000);
+        assertEquals(1, pair.serverCallbacks.messagesReceived.size(), "server should receive the message");
+        assertArrayEquals("Hello".getBytes(StandardCharsets.UTF_8),
+                pair.serverCallbacks.messagesReceived.get(0).getPayload());
+        assertEquals(SocketState.kConnected, pair.client.socket.state());
+        assertEquals(SocketState.kConnected, pair.server.socket.state());
+
+        pair.client.socket.shutdown();
+        waitUntil(() -> pair.client.socket.state() == SocketState.kClosed
+                && pair.server.socket.state() == SocketState.kClosed, 2000);
+        assertEquals(SocketState.kClosed, pair.client.socket.state());
+        assertEquals(SocketState.kClosed, pair.server.socket.state());
+        assertFalse(pair.clientCallbacks.failed);
+        assertFalse(pair.serverCallbacks.failed);
+    }
+
+    /**
+     * The random-number callback given to generateConnectionToken runs inside dcsctp, which is
+     * compiled without exception support, so its failures have to be carried around dcsctp and
+     * surface to the caller as if the callback had been called directly.
+     */
+    @Test
+    public void testGenerateConnectionTokenCallbackFailures() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        DcSctpOptions options = new DcSctpOptions();
+
+        // A throwing callback propagates its own exception.
+        IllegalStateException thrown = assertThrows(IllegalStateException.class,
+                () -> factory.generateConnectionToken(options, (low, high) -> {
+                    throw new IllegalStateException("no entropy today");
+                }));
+        assertEquals("no entropy today", thrown.getMessage());
+
+        // An out-of-range result is rejected (one past the end of the half-open range).
+        long[] range = new long[2];
+        IllegalArgumentException outOfRange = assertThrows(IllegalArgumentException.class,
+                () -> factory.generateConnectionToken(options, (low, high) -> {
+                    range[0] = low;
+                    range[1] = high;
+                    return high;
+                }));
+        assertEquals("getRandomInt returned " + range[1] + ", outside [" + range[0] + ", " + range[1] + ")",
+                outOfRange.getMessage());
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.generateConnectionToken(options, (low, high) -> low - 1));
+
+        // The factory is still usable afterwards.
+        byte[] token = factory.generateConnectionToken(options,
+                (low, high) -> ThreadLocalRandom.current().nextLong(low, high));
+        assertTrue(token.length > 0);
+    }
+
     private static void sleep(long millis) {
         try {
             Thread.sleep(millis);
@@ -273,12 +385,18 @@ public class DcSctp4jTest {
         test.testSocketCreate();
         System.out.println("Running testSimpleConnection");
         test.testSimpleConnection();
+        System.out.println("Running testPullModeConnection");
+        test.testPullModeConnection();
         System.out.println("Running testReceivePacketRejectsInvalidBounds");
         test.testReceivePacketRejectsInvalidBounds();
         System.out.println("Running testNativeReceivePacketRejectsInvalidBounds");
         test.testNativeReceivePacketRejectsInvalidBounds();
         System.out.println("Running testIncomingStreamsReset");
         test.testIncomingStreamsReset();
+        System.out.println("Running testConnectWithConnectionToken");
+        test.testConnectWithConnectionToken();
+        System.out.println("Running testGenerateConnectionTokenCallbackFailures");
+        test.testGenerateConnectionTokenCallbackFailures();
         /* System.out.println("Testing testExceptionThroughJNI");
         test.testExceptionThroughJNI(); */
         DcSctp4jTest.executor.shutdown();
@@ -323,31 +441,25 @@ class TestCallbacks implements DcSctpSocketCallbacks {
     private final Clock clock;
     private final SocketWrapper wrapper;
     private final Logger logger;
+    private final boolean pullMode;
 
     private final SocketWrapper dest;
+
+    public volatile boolean failed = false;
+    /** Messages received, whether delivered by OnMessageReceived or fetched after OnMessageReady. */
+    public final List<DcSctpMessage> messagesReceived = Collections.synchronizedList(new ArrayList<>());
 
     public final List<short[]> streamsResetPerformed = Collections.synchronizedList(new ArrayList<>());
     public final List<short[]> incomingStreamsReset = Collections.synchronizedList(new ArrayList<>());
     public final List<short[]> streamsResetFailed = Collections.synchronizedList(new ArrayList<>());
-    public final List<DcSctpMessage> messagesReceived = Collections.synchronizedList(new ArrayList<>());
 
-    public TestCallbacks(SocketWrapper wrapper, Clock clock, Logger logger, SocketWrapper dest)
+    public TestCallbacks(SocketWrapper wrapper, Clock clock, Logger logger, SocketWrapper dest, boolean pullMode)
     {
         this.wrapper = wrapper;
         this.clock = clock;
         this.logger = logger;
+        this.pullMode = pullMode;
         this.dest = dest;
-    }
-
-    public static ByteBuffer cloneByteBuffer(final ByteBuffer original) {
-        // Create clone with same capacity as original.
-        final ByteBuffer clone = (original.isDirect()) ?
-                ByteBuffer.allocateDirect(original.capacity()) :
-                ByteBuffer.allocate(original.capacity());
-
-        clone.put(original);
-
-        return clone;
     }
 
     @Override
@@ -365,12 +477,14 @@ class TestCallbacks implements DcSctpSocketCallbacks {
                 try {
                     dest.socket.receivePacket(data, 0, data.length);
                 } catch (Exception e) {
+                    failed = true;
                     logger.error("Error processing received packet", e);
                 }
             });
         }
         catch (Exception e) {
             logger.error("Error submitting packet", e);
+            failed = true;
             return SendPacketStatus.kError;
         }
         return SendPacketStatus.kSuccess;
@@ -395,13 +509,45 @@ class TestCallbacks implements DcSctpSocketCallbacks {
 
     @Override
     public void OnMessageReceived(@NotNull DcSctpMessage message) {
-        String s = new String(message.getPayload(), StandardCharsets.UTF_8);
+        try {
+            assertFalse(pullMode, "OnMessageReceived must not be called in pull mode");
+            messagesReceived.add(message);
+            String s = new String(message.getPayload(), StandardCharsets.UTF_8);
 
-        logger.info("Message received: " +
-                "streamID " + message.getStreamID() +
-                ", PPID " + message.getPpid() +
-                ", payload " + s);
-        messagesReceived.add(message);
+            logger.info("Message received: " +
+                    "streamID " + message.getStreamID() +
+                    ", PPID " + message.getPpid() +
+                    ", payload " + s);
+        } catch (Throwable e) {
+            failed = true;
+            logger.error("Error processing OnMessageReceived", e);
+        }
+    }
+
+    @Override
+    public void OnMessageReady() {
+        try {
+            assertTrue(pullMode);
+            long messagesReady = wrapper.socket.messagesReady();
+            assertTrue(messagesReady > 0);
+            logger.info(messagesReady + " messages ready");
+
+            // One OnMessageReady may announce several messages; drain the queue.
+            DcSctpMessage message;
+            while ((message = wrapper.socket.getNextMessage()) != null) {
+                messagesReceived.add(message);
+                String s = new String(message.getPayload(), StandardCharsets.UTF_8);
+
+                logger.info("Message received with pull: " +
+                        "streamID " + message.getStreamID() +
+                        ", PPID " + message.getPpid() +
+                        ", payload " + s);
+            }
+            assertEquals(0, wrapper.socket.messagesReady());
+        } catch (Throwable e) {
+            failed = true;
+            logger.error("Error processing OnMessageReady", e);
+        }
     }
 
     @Override

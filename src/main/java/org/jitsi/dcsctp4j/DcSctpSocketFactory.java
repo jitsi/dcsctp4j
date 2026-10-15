@@ -22,6 +22,8 @@ import smjni.jnigen.ExposeToNative;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.LongBinaryOperator;
 import java.util.stream.Collectors;
 
 @ExposeToNative
@@ -62,6 +64,47 @@ public class DcSctpSocketFactory
             @Nullable PacketObserver packetObserver,
             @NotNull DcSctpOptions options);
 
+    /**
+     * Generates a connection token for an out-of-band connection sequence: a serialized
+     * SCTP INIT chunk describing this side's capabilities under {@code options}. The token
+     * is to be exchanged with the peer out of band, after which both sides call
+     * {@link DcSctpSocketInterface#connectWithConnectionToken} with their own and the
+     * peer's token.
+     *
+     * {@code getRandomInt} must return a uniformly random value in the range
+     * {@code [low, high)}; it is used in the same way as
+     * {@link DcSctpSocketCallbacks#getRandomInt}. An exception thrown by
+     * {@code getRandomInt} propagates to the caller.
+     *
+     * @throws IllegalArgumentException if {@code getRandomInt} returns a value outside
+     * {@code [low, high)}.
+     */
+    public byte @NotNull [] generateConnectionToken(
+            @NotNull DcSctpOptions options,
+            @NotNull LongBinaryOperator getRandomInt)
+    {
+        Objects.requireNonNull(options, "options");
+        Objects.requireNonNull(getRandomInt, "getRandomInt");
+        /* Validate the callback's results here, so that a misbehaving callback surfaces as an
+           ordinary IllegalArgumentException. This is the only range check: the native code just
+           carries the callback's result, or its exception, through dcsctp. */
+        LongBinaryOperator checked = (low, high) -> {
+            long value = getRandomInt.applyAsLong(low, high);
+            if (value < low || value >= high)
+            {
+                throw new IllegalArgumentException("getRandomInt returned " + value +
+                        ", outside [" + low + ", " + high + ")");
+            }
+            return value;
+        };
+        return generateConnectionToken_(ptr, options, checked);
+    }
+
+    private native byte[] generateConnectionToken_(
+            long ptr,
+            @NotNull DcSctpOptions options,
+            @NotNull LongBinaryOperator getRandomInt);
+
     @ExposeToNative
     static private class NativeSctpSocket implements DcSctpSocketInterface
     {
@@ -95,6 +138,22 @@ public class DcSctpSocketFactory
         private native void receivePacket_(long ptr, byte[] data, int offset, int length);
 
         @Override
+        public synchronized long messagesReady()
+        {
+            return messagesReady_(ptr);
+        }
+
+        private native long messagesReady_(long ptr);
+
+        @Override
+        public synchronized DcSctpMessage getNextMessage()
+        {
+            return getNextMessage_(ptr);
+        }
+
+        private native DcSctpMessage getNextMessage_(long ptr);
+
+        @Override
         public synchronized void handleTimeout(long timeoutId)
         {
             handleTimeout_(ptr, timeoutId);
@@ -109,6 +168,24 @@ public class DcSctpSocketFactory
         }
 
         private native void connect_(long ptr);
+
+        @Override
+        public synchronized boolean connectWithConnectionToken(byte @NotNull [] myData, byte @NotNull [] peerData)
+        {
+            Objects.requireNonNull(myData, "myData");
+            Objects.requireNonNull(peerData, "peerData");
+            /* dcsctp itself does not check the state here: on a connected socket it would
+               silently rebuild the association. */
+            SocketState state = state();
+            if (state != SocketState.kClosed)
+            {
+                throw new IllegalStateException(
+                        "connectWithConnectionToken requires a closed socket, state is " + state);
+            }
+            return connectWithConnectionToken_(ptr, myData, peerData);
+        }
+
+        private native boolean connectWithConnectionToken_(long ptr, byte[] myData, byte[] peerData);
 
         @Override
         public synchronized void shutdown()

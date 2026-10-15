@@ -17,7 +17,7 @@
 #include "log_proxy.h"
 
 using namespace smjni;
-using namespace rtc;
+using namespace webrtc;
 using namespace std;
 
 LogProxy::LogProxy(JNIEnv * env, jLogProxy jProxy, LoggingSeverity minSeverity):

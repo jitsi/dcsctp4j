@@ -85,18 +85,18 @@ LoggingSeverity_members::LoggingSeverity_members(JNIEnv * env) :
     m_LS_NONE(java_classes::get<LogProxy_LoggingSeverity_class>().get_LS_NONE(env))
 {}
 
-jLogProxy_LoggingSeverity LoggingSeverity_members::map(JNIEnv *env, rtc::LoggingSeverity loggingSeverity) const
+jLogProxy_LoggingSeverity LoggingSeverity_members::map(JNIEnv *env, webrtc::LoggingSeverity loggingSeverity) const
 {
     switch (loggingSeverity) {
-    case rtc::LoggingSeverity::LS_VERBOSE:
+    case webrtc::LoggingSeverity::LS_VERBOSE:
         return LS_VERBOSE();
-    case rtc::LoggingSeverity::LS_INFO:
+    case webrtc::LoggingSeverity::LS_INFO:
         return LS_INFO();
-    case rtc::LoggingSeverity::LS_WARNING:
+    case webrtc::LoggingSeverity::LS_WARNING:
         return LS_WARNING();
-    case rtc::LoggingSeverity::LS_ERROR:
+    case webrtc::LoggingSeverity::LS_ERROR:
         return LS_ERROR();
-    case rtc::LoggingSeverity::LS_NONE:
+    case webrtc::LoggingSeverity::LS_NONE:
         return LS_NONE();
     default:
         auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Invalid value for LoggingSeverity"));
@@ -104,18 +104,18 @@ jLogProxy_LoggingSeverity LoggingSeverity_members::map(JNIEnv *env, rtc::Logging
     }
 }
 
-rtc::LoggingSeverity LoggingSeverity_members::map(JNIEnv * env, jLogProxy_LoggingSeverity loggingSeverity) const
+webrtc::LoggingSeverity LoggingSeverity_members::map(JNIEnv * env, jLogProxy_LoggingSeverity loggingSeverity) const
 {
     if (env->IsSameObject(loggingSeverity, LS_VERBOSE())) {
-        return rtc::LoggingSeverity::LS_VERBOSE;
+        return webrtc::LoggingSeverity::LS_VERBOSE;
     } else if (env->IsSameObject(loggingSeverity, LS_INFO())) {
-        return rtc::LoggingSeverity::LS_INFO;
+        return webrtc::LoggingSeverity::LS_INFO;
     } else if (env->IsSameObject(loggingSeverity, LS_WARNING())) {
-        return rtc::LoggingSeverity::LS_WARNING;
+        return webrtc::LoggingSeverity::LS_WARNING;
     } else if (env->IsSameObject(loggingSeverity, LS_ERROR())) {
-        return rtc::LoggingSeverity::LS_ERROR;
+        return webrtc::LoggingSeverity::LS_ERROR;
     } else if (env->IsSameObject(loggingSeverity, LS_NONE())) {
-        return rtc::LoggingSeverity::LS_NONE;
+        return webrtc::LoggingSeverity::LS_NONE;
     } else {
         auto ex = java_runtime::throwable().ctor(env, java_string_create(env, "Invalid value for LoggingSeverity"));
         throw java_exception(ex);

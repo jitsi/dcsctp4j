@@ -35,7 +35,20 @@ Prerequisites:
 - Maven
 - CMake
 - Git
-- APT packages `build-essential`, `g++-aarch64-linux-gnu`, `g++-powerpc64le-linux-gnu` and their dependencies
+- APT package `build-essential` (for `make` and the tools WebRTC's build expects on the host)
+
+The Linux libraries, for all three architectures, are compiled with the clang that the WebRTC
+checkout provides, against WebRTC's Debian sysroots. The host's own compiler is not used, so the
+host distribution does not affect what glibc and libstdc++ the libraries require at runtime
+(Debian bullseye, or Ubuntu 20.04, and newer).
+
+**The Linux build requires an x86-64 host.** WebRTC only ships its clang, and several of the
+tools `gclient` installs, as x86-64 Linux binaries. On an arm64 or ppc64le host those are not
+available, and WebRTC's gn build files also pass flags that only its own clang understands, so a
+distribution clang cannot drive the gn build either. A non-x86 host can still build its own
+architecture with `resources/Makefile` and a native clang pointed at the matching WebRTC
+sysroot, which is the path ppc64le uses on x86 hosts too; see the Makefile for the variables it
+takes. Running the x86-64 clang under `qemu-user` is not an option: it miscompiles.
 
 * Clone the project
 * Update the SimpleJNI subproject with
@@ -57,6 +70,25 @@ $ resources/ubuntu-build-all.sh ~/DepotTools ~/WebRTC
 [WebRTC](https://webrtc.github.io/webrtc-org/native-code/development/); the
 latter of these is quite large, so if this is your first checkout make sure
 you have enough disk space and be prepared to wait for some time.
+
+#### Logging in to Google's Git servers
+
+Anonymous access to `webrtc.googlesource.com` and `chromium.googlesource.com` is rate limited
+and in practice several times slower than authenticated access; a large anonymous sync can also
+fail part way through. Before the first checkout, generate Git credentials for **both** hosts
+while signed in to a Google account, at <https://webrtc.googlesource.com/new-password> and
+<https://chromium.googlesource.com/new-password>. Each page shows a short shell script; run it in a
+shell (do not paste it into a file). It creates `~/.gitcookies` if needed, points
+`git config --global http.cookiefile` at it, and appends that host's cookie line. On a build
+machine, run the scripts as the user that runs the build (for example `sudo -u jenkins -i`), since
+that is whose `gclient` fetches the code; the file should be readable only by that user. To check,
+this should print 200 rather than 401:
+```
+curl -s -o /dev/null -w '%{http_code}\n' -b ~/.gitcookies \
+  'https://chromium.googlesource.com/a/chromium/src/+refs/heads/main?format=TEXT'
+```
+The [WebRTC development page](https://webrtc.github.io/webrtc-org/native-code/development/#contributing-your-first-patch)
+describes the same requirement under "make sure you're logged in".
 
 ### macOS
 - OpenJDK 11 (or newer)
