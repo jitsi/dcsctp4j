@@ -189,8 +189,10 @@ private:
     Timeout_class timeoutClass;
     smjni::global_java_ref<jTimeout> timeout;
     CallbackExceptionSink& exceptions;
-    /* Whether a start() has been delivered to Java, so that stop() and restart()
-       honour Timeout's promise that they only follow a start(). */
+    /* Whether Java currently has this timer started, i.e. a start() (or restart())
+       reached it and no stop() has since. Keeps Timeout's promise that stop() and
+       restart() only follow a start(), and that start() is never delivered twice,
+       even when some of dcsctp's calls were suppressed after a callback threw. */
     bool started = false;
 };
 

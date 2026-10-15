@@ -91,7 +91,15 @@ void WrappedTimeout::Start(DurationMs duration, TimeoutID timeout_id)
     exceptions.call([&] {
         JNIEnv* env = jni_provider::get_jni();
 
-        timeoutClass.start(env, timeout, *duration, *timeout_id);
+        if (started) {
+            /* dcsctp stopped this timer, but that stop() was suppressed because an
+               earlier callback had thrown, so Java still has it scheduled. Deliver a
+               restart() to keep Timeout's start/stop pairing intact. */
+            timeoutClass.restart(env, timeout, *duration, *timeout_id);
+        }
+        else {
+            timeoutClass.start(env, timeout, *duration, *timeout_id);
+        }
         started = true;
     });
 }
@@ -104,12 +112,13 @@ void WrappedTimeout::Stop()
     if (!started) {
         return;
     }
-    /* dcsctp considers the timer stopped from here on whether or not Java's stop()
-       succeeds, so record that before the call: a later Start() must deliver a fresh
-       start() rather than a second one, and a failed stop() must not be retried as an
-       unpaired stop() later. */
-    started = false;
     exceptions.call([&] {
+        /* Once stop() is delivered, Java's timer counts as stopped whether or not the
+           call throws, so a failed stop() is not retried as an unpaired stop() later.
+           If the call is suppressed (an earlier callback threw) this body does not run
+           and `started` stays true: Java still has the timer scheduled, and Start()
+           will repair the pairing with a restart(). */
+        started = false;
         JNIEnv* env = jni_provider::get_jni();
 
         timeoutClass.stop(env, timeout);
@@ -123,11 +132,12 @@ void WrappedTimeout::Restart(DurationMs duration, TimeoutID timeout_id)
         Start(duration, timeout_id);
         return;
     }
-    /* Java's default restart() is stop() followed by start(); if it throws we cannot
-       know which half ran, so treat the timer as stopped and let the next Start()
-       pair things up again. */
-    started = false;
     exceptions.call([&] {
+        /* Java's default restart() is stop() followed by start(); if it throws we cannot
+           know which half ran, so treat the timer as stopped and let the next Start()
+           pair things up again. If the call is suppressed, the old scheduling stands
+           and `started` stays true. */
+        started = false;
         JNIEnv* env = jni_provider::get_jni();
 
         timeoutClass.restart(env, timeout, *duration, *timeout_id);

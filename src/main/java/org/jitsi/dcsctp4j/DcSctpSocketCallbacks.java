@@ -36,16 +36,19 @@ import smjni.jnigen.*;
  * and {@link #Now}). That method's own effect on the library has already taken
  * place by then: a {@code send()} whose packet callback threw has still queued the
  * message, and a {@code resetStreams()} has still requested the reset, so the
- * exception does not mean the operation was not performed. No further callbacks are invoked for that method call once
- * one has thrown; in particular a {@link Timeout} whose {@code start()} was
- * suppressed this way never receives {@code stop()} or {@code restart()}. The
+ * exception does not mean the operation was not performed. No further callbacks
+ * are invoked for that method call once one has thrown; in particular a
+ * {@link Timeout} whose {@code start()} was suppressed this way never receives
+ * {@code stop()} or {@code restart()}. The
  * library's own state is kept consistent, but the information the failed callback
  * would have handled is lost, and so is whatever the suppressed callbacks would
  * have delivered: not only data (a timeout that could not be created never fires,
  * a packet that could not be sent is reported to the library as a send error) but
- * also state-change notifications such as {@link #OnAborted} or {@link #OnClosed},
- * and a {@link Timeout} whose {@code restart()} was suppressed stays dead. Callers
- * should therefore treat the socket as unusable and
+ * also state-change notifications such as {@link #OnAborted} or {@link #OnClosed}.
+ * A {@link Timeout} whose {@code stop()} or {@code restart()} was suppressed keeps
+ * its previous schedule until the library next starts or stops it; the start/stop
+ * pairing promised by {@link Timeout} is preserved throughout. Callers should
+ * nevertheless treat the socket as unusable and
  * {@link DcSctpSocketInterface#close} it, without relying on further callbacks.
  */
 @ExposeToNative
