@@ -120,6 +120,8 @@ void WrappedTimeout::Stop()
         /* Once stop() is delivered, Java's timer counts as stopped whether or not the
            call throws, so a failed stop() is not retried as an unpaired stop() later. */
         delivered = true;
+        /* A delivered call brings Java's view back in sync, whatever happened before. */
+        stopSuppressed = false;
         started = false;
         JNIEnv* env = jni_provider::get_jni();
 
@@ -144,6 +146,7 @@ void WrappedTimeout::Restart(DurationMs duration, TimeoutID timeout_id)
            know which half ran, so treat the timer as stopped and let the next Start()
            pair things up again. If the call is suppressed, the old scheduling stands
            and `started` stays true. */
+        stopSuppressed = false;
         started = false;
         JNIEnv* env = jni_provider::get_jni();
 
