@@ -103,21 +103,15 @@ NATIVE_PROLOG
     auto & operatorClass = java_classes::get<LongBinaryOperator_class>();
     /* GenerateConnectionToken calls this synchronously, so env stays valid for the duration.
        dcsctp is compiled without exception support, so an exception from the Java callback
-       must not unwind through it: hold it and rethrow once dcsctp has returned. */
+       must not unwind through it: hold it and rethrow once dcsctp has returned. The range of
+       the result is validated by the Java wrapper, DcSctpSocketFactory.generateConnectionToken. */
     std::exception_ptr pending;
     auto getRandomInt = [env, &operatorClass, jGetRandomInt, &pending](uint32_t low, uint32_t high) -> uint32_t {
         if (pending) {
             return low;
         }
         try {
-            jlong value = operatorClass.applyAsLong(env, jGetRandomInt, low, high);
-            if (value < low || value >= high) {
-                auto ex = java_runtime::throwable().ctor(env, java_string_create(env,
-                        "getRandomInt returned " + std::to_string(value) + ", outside [" +
-                        std::to_string(low) + ", " + std::to_string(high) + ")"));
-                throw java_exception(ex);
-            }
-            return static_cast<uint32_t>(value);
+            return static_cast<uint32_t>(operatorClass.applyAsLong(env, jGetRandomInt, low, high));
         }
         catch (...) {
             pending = std::current_exception();

@@ -86,7 +86,8 @@ public class DcSctpSocketFactory
         Objects.requireNonNull(options, "options");
         Objects.requireNonNull(getRandomInt, "getRandomInt");
         /* Validate the callback's results here, so that a misbehaving callback surfaces as an
-           ordinary IllegalArgumentException; the native code only carries Java exceptions through. */
+           ordinary IllegalArgumentException. This is the only range check: the native code just
+           carries the callback's result, or its exception, through dcsctp. */
         LongBinaryOperator checked = (low, high) -> {
             long value = getRandomInt.applyAsLong(low, high);
             if (value < low || value >= high)

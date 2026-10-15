@@ -173,7 +173,7 @@ void WrappedSocketCallbacks::OnMessageReceived(DcSctpMessage message)
 
     auto socketCallbacks = getObj(env);
 
-    const auto& payload = message.payload();
+    auto payload = message.payload();
     auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
 
     socketCallbacksClass.OnMessageReceived_(env, socketCallbacks, jPayload.c_ptr(), *message.ppid(), *message.stream_id());

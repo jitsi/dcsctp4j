@@ -352,9 +352,15 @@ public class DcSctp4jTest {
         assertEquals("no entropy today", thrown.getMessage());
 
         // An out-of-range result is rejected (one past the end of the half-open range).
+        long[] range = new long[2];
         IllegalArgumentException outOfRange = assertThrows(IllegalArgumentException.class,
-                () -> factory.generateConnectionToken(options, (low, high) -> high));
-        assertTrue(outOfRange.getMessage().startsWith("getRandomInt returned"), outOfRange.getMessage());
+                () -> factory.generateConnectionToken(options, (low, high) -> {
+                    range[0] = low;
+                    range[1] = high;
+                    return high;
+                }));
+        assertEquals("getRandomInt returned " + range[1] + ", outside [" + range[0] + ", " + range[1] + ")",
+                outOfRange.getMessage());
         assertThrows(IllegalArgumentException.class,
                 () -> factory.generateConnectionToken(options, (low, high) -> low - 1));
 

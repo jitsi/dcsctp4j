@@ -245,7 +245,7 @@ DcSctpMessage convertDcSctpMessage(JNIEnv* env, jDcSctpMessage jmessage)
 
 local_java_ref<jDcSctpMessage> convertDcSctpMessage(JNIEnv* env, const DcSctpMessage& message)
 {
-    const auto& payload = message.payload();
+    auto payload = message.payload();
     auto jPayload = java_array_create<jbyte>(env, payload.begin(), payload.end());
 
     auto & messageClass = java_classes::get<DcSctpMessage_class>();
