@@ -91,10 +91,13 @@ void WrappedTimeout::Start(DurationMs duration, TimeoutID timeout_id)
     exceptions.call([&] {
         JNIEnv* env = jni_provider::get_jni();
 
-        if (started) {
-            /* dcsctp stopped this timer, but that stop() was suppressed because an
-               earlier callback had thrown, so Java still has it scheduled. Deliver a
-               restart() to keep Timeout's start/stop pairing intact. */
+        if (stopSuppressed) {
+            /* dcsctp stopped this timer, but that stop() never reached Java, which
+               therefore still has it scheduled: deliver a restart() rather than a
+               second start(), to keep Timeout's pairing intact. As in Restart(), a
+               failure leaves the timer counted as stopped. */
+            stopSuppressed = false;
+            started = false;
             timeoutClass.restart(env, timeout, *duration, *timeout_id);
         }
         else {
@@ -112,17 +115,21 @@ void WrappedTimeout::Stop()
     if (!started) {
         return;
     }
+    bool delivered = false;
     exceptions.call([&] {
         /* Once stop() is delivered, Java's timer counts as stopped whether or not the
-           call throws, so a failed stop() is not retried as an unpaired stop() later.
-           If the call is suppressed (an earlier callback threw) this body does not run
-           and `started` stays true: Java still has the timer scheduled, and Start()
-           will repair the pairing with a restart(). */
+           call throws, so a failed stop() is not retried as an unpaired stop() later. */
+        delivered = true;
         started = false;
         JNIEnv* env = jni_provider::get_jni();
 
         timeoutClass.stop(env, timeout);
     });
+    if (!delivered) {
+        /* Suppressed because an earlier callback threw: Java still has the timer
+           scheduled. Start() will repair the pairing with a restart(). */
+        stopSuppressed = true;
+    }
 }
 
 

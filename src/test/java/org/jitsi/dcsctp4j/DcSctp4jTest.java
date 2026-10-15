@@ -170,6 +170,13 @@ public class DcSctp4jTest {
             super.restart(durationMs, timeoutId);
             running = true;
         }
+
+        @Override
+        public void run() {
+            // Expiry ends the running period: dcsctp may then re-arm with a plain start().
+            running = false;
+            super.run();
+        }
     }
 
     private static TestCallbacks callbacksWithTimeouts(SocketWrapper wrapper, Logger logger, SocketWrapper dest,
@@ -226,6 +233,42 @@ public class DcSctp4jTest {
         assertEquals(0, counters.pairingViolations.get());
         // dcsctp finished closing regardless.
         assertEquals(SocketState.kClosed, wrapper.socket.state());
+    }
+
+    /**
+     * On the normal path an expired timer is re-armed by dcsctp with Start(), which must reach
+     * Java as start(), not restart(): restart() is only for a timer Java still has running.
+     */
+    @Test
+    public void testExpiredTimerIsRearmedWithStart() {
+        DcSctpSocketFactory factory = new DcSctpSocketFactory();
+        SocketWrapper wrapper = new SocketWrapper();
+        TimeoutCounters counters = new TimeoutCounters();
+        // No peer: packets are reported as a temporary failure, so T1-init keeps expiring and
+        // being re-armed for its retransmissions.
+        TestCallbacks callbacks = new TestCallbacks(wrapper, Clock.systemUTC(), new LoggerImpl("testRearm"),
+                null, false) {
+            @Override
+            public Timeout createTimeout(@NotNull DelayPrecision precision) {
+                return new CountingTimeout(wrapper, counters, null, null);
+            }
+
+            @Override
+            public SendPacketStatus sendPacketWithStatus(@NotNull byte[] data) {
+                return SendPacketStatus.kTemporaryFailure;
+            }
+        };
+        wrapper.socket = factory.create("testRearm", callbacks, null, new DcSctpOptions());
+
+        wrapper.socket.connect();
+        waitUntil(() -> counters.starts.get() >= 2, 5000);
+        assertTrue(counters.starts.get() >= 2, "T1-init should have expired and been re-armed");
+        assertEquals(0, counters.restarts.get(), "an expired timer is re-armed with start(), not restart()");
+        assertEquals(0, counters.pairingViolations.get());
+
+        wrapper.socket.close();
+        assertEquals(0, counters.pairingViolations.get());
+        assertFalse(callbacks.failed);
     }
 
     /**
@@ -661,6 +704,8 @@ public class DcSctp4jTest {
         test.testTimeoutStopExceptionSurfacesFromClose();
         System.out.println("Running testSuppressedTimerStopKeepsPairing");
         test.testSuppressedTimerStopKeepsPairing();
+        System.out.println("Running testExpiredTimerIsRearmedWithStart");
+        test.testExpiredTimerIsRearmedWithStart();
         System.out.println("Running testPacketObserverExceptionSurfacesFromSocketMethod");
         test.testPacketObserverExceptionSurfacesFromSocketMethod();
         System.out.println("Running testCallbackExceptionSurfacesFromSocketMethod");
