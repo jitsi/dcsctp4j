@@ -21,10 +21,25 @@ env:
   WEBRTC_SHALLOW: true
 
 jobs:
-  linux:
-    name: Linux
-    runs-on: ubuntu-24.04
-    timeout-minutes: 120
+  natives:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: ${{ matrix.timeout }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            runner: ubuntu-24.04
+            timeout: 120
+            build-script: resources/ubuntu-build-all.sh
+            natives: linux
+          - name: macOS
+            runner: macos-15
+            timeout: 180
+            build-script: resources/macos-build-all.sh
+            natives: darwin
 
     steps:
       - name: Disk space
@@ -43,7 +58,7 @@ jobs:
           cache: maven
 
       - name: Build native libraries
-        run: resources/ubuntu-build-all.sh "$RUNNER_TEMP/depot_tools" "$RUNNER_TEMP/WebRTC"
+        run: ${{ matrix.build-script }} "$RUNNER_TEMP/depot_tools" "$RUNNER_TEMP/WebRTC"
 
       - name: Build and test with Maven
         run: mvn verify
@@ -55,73 +70,26 @@ jobs:
       - name: Upload native libraries
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: natives-linux
-          path: src/main/resources/linux-*/
+          name: natives-${{ matrix.natives }}
+          path: src/main/resources/${{ matrix.natives }}-*/
           if-no-files-found: error
 
       - name: Upload test reports
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: surefire-reports-linux
-          path: target/surefire-reports/
-
-  macos:
-    name: macOS
-    runs-on: macos-15
-    timeout-minutes: 180
-
-    steps:
-      - name: Disk space
-        run: df -h /
-
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: true
-
-      - name: Set up JDK
-        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
-        with:
-          distribution: temurin
-          java-version: ${{ env.JAVA_VERSION }}
-          cache: maven
-
-      - name: Build native libraries
-        run: resources/macos-build-all.sh "$RUNNER_TEMP/depot_tools" "$RUNNER_TEMP/WebRTC"
-
-      - name: Build and test with Maven
-        run: mvn verify
-
-      - name: Disk usage
-        if: always()
-        run: df -h /
-
-      - name: Upload native libraries
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: natives-macos
-          path: src/main/resources/darwin-*/
-          if-no-files-found: error
-
-      - name: Upload test reports
-        if: failure()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: surefire-reports-macos
+          name: surefire-reports-${{ matrix.natives }}
           path: target/surefire-reports/
 
   jar:
     name: Jar with all native libraries
-    needs: [ linux, macos ]
+    needs: natives
     runs-on: ubuntu-24.04
     timeout-minutes: 30
 
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          submodules: true
 
       - name: Set up JDK
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -137,13 +105,16 @@ jobs:
           path: src/main/resources
           merge-multiple: true
 
-      - name: Build and test with Maven
-        run: mvn verify
+      # The natives jobs have already run the tests with these libraries.
+      - name: Build the jar with Maven
+        run: mvn verify -DskipTests
 
+      # Keep this list in sync with ARCHS in resources/ubuntu-build-all.sh and
+      # resources/macos-build-all.sh (named as in ubuntu-build.sh and macos-build.sh).
       - name: Check the jar has every native library
         run: |
-          JAR=target/jitsi-dcsctp-$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout).jar
-          unzip -l "$JAR" | grep libdcsctp4j
+          JAR=$(ls target/jitsi-dcsctp-*.jar)
+          unzip -l "$JAR" | grep libdcsctp4j || true
           for lib in linux-x86-64/libdcsctp4j.so linux-aarch64/libdcsctp4j.so linux-ppc64le/libdcsctp4j.so \
               darwin-x86-64/libdcsctp4j.dylib darwin-aarch64/libdcsctp4j.dylib; do
             unzip -l "$JAR" "$lib" > /dev/null || { echo "ERROR: $lib is missing from $JAR"; exit 1; }
