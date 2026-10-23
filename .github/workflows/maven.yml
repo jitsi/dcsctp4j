@@ -1,0 +1,157 @@
+# Builds the native libraries against a shallow WebRTC checkout and runs the tests,
+# on Linux (x86-64, arm64 and ppc64le libraries) and on macOS (x86-64 and arm64),
+# then packages all of them into one jar, uploaded as the dcsctp4j-jar artifact.
+
+name: Build and test
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: 17
+  MAVEN_ARGS: -B
+  WEBRTC_SHALLOW: true
+
+jobs:
+  linux:
+    name: Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Disk space
+        run: df -h /
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+
+      - name: Set up JDK
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Build native libraries
+        run: resources/ubuntu-build-all.sh "$RUNNER_TEMP/depot_tools" "$RUNNER_TEMP/WebRTC"
+
+      - name: Build and test with Maven
+        run: mvn verify
+
+      - name: Disk usage
+        if: always()
+        run: df -h /
+
+      - name: Upload native libraries
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: natives-linux
+          path: src/main/resources/linux-*/
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: surefire-reports-linux
+          path: target/surefire-reports/
+
+  macos:
+    name: macOS
+    runs-on: macos-15
+    timeout-minutes: 180
+
+    steps:
+      - name: Disk space
+        run: df -h /
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+
+      - name: Set up JDK
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Build native libraries
+        run: resources/macos-build-all.sh "$RUNNER_TEMP/depot_tools" "$RUNNER_TEMP/WebRTC"
+
+      - name: Build and test with Maven
+        run: mvn verify
+
+      - name: Disk usage
+        if: always()
+        run: df -h /
+
+      - name: Upload native libraries
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: natives-macos
+          path: src/main/resources/darwin-*/
+          if-no-files-found: error
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: surefire-reports-macos
+          path: target/surefire-reports/
+
+  jar:
+    name: Jar with all native libraries
+    needs: [ linux, macos ]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+
+      - name: Set up JDK
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+
+      - name: Download native libraries
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: natives-*
+          path: src/main/resources
+          merge-multiple: true
+
+      - name: Build and test with Maven
+        run: mvn verify
+
+      - name: Check the jar has every native library
+        run: |
+          JAR=target/jitsi-dcsctp-$(mvn -q help:evaluate -Dexpression=project.version -DforceStdout).jar
+          unzip -l "$JAR" | grep libdcsctp4j
+          for lib in linux-x86-64/libdcsctp4j.so linux-aarch64/libdcsctp4j.so linux-ppc64le/libdcsctp4j.so \
+              darwin-x86-64/libdcsctp4j.dylib darwin-aarch64/libdcsctp4j.dylib; do
+            unzip -l "$JAR" "$lib" > /dev/null || { echo "ERROR: $lib is missing from $JAR"; exit 1; }
+          done
+
+      - name: Upload jar
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dcsctp4j-jar
+          path: target/jitsi-dcsctp-*.jar
+          if-no-files-found: error
