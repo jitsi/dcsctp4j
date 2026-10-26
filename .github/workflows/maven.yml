@@ -164,6 +164,8 @@ jobs:
           path: src/main/resources
           merge-multiple: true
 
+      # Pushed as github-actions[bot] with the job's token: a tag protection rule or
+      # ruleset on v* tags would make this fail when the pom version is bumped.
       - name: Create the tag for the pom version
         run: |
           MVNVER=$(python3 -c 'import xml.etree.ElementTree as E; print(E.parse("pom.xml").getroot().findtext("{http://maven.apache.org/POM/4.0.0}version"))')
@@ -192,3 +194,10 @@ jobs:
         run: |
           echo -e "$GPG_KEY" | gpg --batch --import
           mvn --no-transfer-progress -Dgpg.passphrase="$GPG_PW" -Drelease=true -DskipTests deploy
+
+      - name: Upload released jars
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: released-jars
+          path: target/jitsi-dcsctp-*.jar
+          if-no-files-found: error
