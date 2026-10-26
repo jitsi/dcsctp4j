@@ -5,7 +5,7 @@ The sctp4j project creates a JNI wrapper around the dcsctp library from libWebRT
 
 To avoid having to build all native libraries,
 execute `resources/fetch-maven.sh` to download and extract the native binaries
-from the latest release on the Jitsi Maven Repository.
+from the latest release on Maven Central.
 
 ## Building the native libraries
 The JNI lib will need to be rebuilt if there is a change in the WebRTC version or a change in the JNI wrapper

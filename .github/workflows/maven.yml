@@ -1,10 +1,13 @@
 # Builds the native libraries against a shallow WebRTC checkout and runs the tests,
 # on Linux (x86-64, arm64 and ppc64le libraries) and on macOS (x86-64 and arm64),
 # then packages all of them into one jar, uploaded as the dcsctp4j-jar artifact.
+# On pushes to main, that jar is released to Maven Central.
 
 name: Build and test
 
 on:
+  push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -13,7 +16,8 @@ permissions:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a release that is already running.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   JAVA_VERSION: 17
@@ -126,3 +130,65 @@ jobs:
           name: dcsctp4j-jar
           path: target/jitsi-dcsctp-*.jar
           if-no-files-found: error
+
+  release:
+    name: Release to Maven Central
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: jar
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      # Pushes the v<pom version> tag that the release version is derived from.
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: maven
+          server-id: ossrh
+          server-username: SONATYPE_USER
+          server-password: SONATYPE_PW
+
+      - name: Download native libraries
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: natives-*
+          path: src/main/resources
+          merge-multiple: true
+
+      - name: Create the tag for the pom version
+        run: |
+          MVNVER=$(python3 -c 'import xml.etree.ElementTree as E; print(E.parse("pom.xml").getroot().findtext("{http://maven.apache.org/POM/4.0.0}version"))')
+          TAG_NAME="v${MVNVER%-SNAPSHOT}"
+          if git rev-parse -q --verify "refs/tags/$TAG_NAME" > /dev/null; then
+            echo "Tag $TAG_NAME already exists"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG_NAME" -m "Automated tag"
+            git push origin "$TAG_NAME"
+          fi
+
+      - name: Set version
+        run: |
+          VERSION=$(git describe --match "v[0-9\.]*" --long --dirty --always)
+          echo "Releasing version ${VERSION:1}"
+          mvn org.codehaus.mojo:versions-maven-plugin:2.23.0:set -DnewVersion=${VERSION:1} -DgenerateBackupPoms=false
+
+      - name: Release to Maven Central
+        env:
+          SONATYPE_USER: ${{ secrets.SONATYPE_USER_2 }}
+          SONATYPE_PW: ${{ secrets.SONATYPE_PW_2 }}
+          GPG_KEY: ${{ secrets.GPG_KEY }}
+          GPG_PW: ${{ secrets.GPG_PW }}
+        run: |
+          echo -e "$GPG_KEY" | gpg --batch --import
+          mvn --no-transfer-progress -Dgpg.passphrase="$GPG_PW" -Drelease=true -DskipTests deploy

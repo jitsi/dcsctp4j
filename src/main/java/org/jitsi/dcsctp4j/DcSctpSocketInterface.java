@@ -94,7 +94,7 @@ public interface DcSctpSocketInterface
 
     /**
      * Gracefully shutdowns the socket and sends all outstanding data. This is an
-     * asynchronous operation and {@link DcSctpSocketCallbacks::OnClosed} will be called
+     * asynchronous operation and {@link DcSctpSocketCallbacks#OnClosed} will be called
      * on success.
      */
     void shutdown();
@@ -146,12 +146,12 @@ public interface DcSctpSocketInterface
 
     /**
      * Resetting streams is an asynchronous operation and the results will
-     * be notified using {@link DcSctpSocketCallbacks::OnStreamsResetDone()} on success
-     * and {@link DcSctpSocketCallbacks::OnStreamsResetFailed()} on failure. Note that
+     * be notified using {@link DcSctpSocketCallbacks#OnStreamsResetPerformed} on success
+     * and {@link DcSctpSocketCallbacks#OnStreamsResetFailed} on failure. Note that
      * only outgoing streams can be reset.
      *
      * When it's known that the peer has reset its own outgoing streams,
-     * {@link DcSctpSocketCallbacks::OnIncomingStreamReset} is called.
+     * {@link DcSctpSocketCallbacks#OnIncomingStreamsReset} is called.
      *
      * Note that resetting a stream will also remove all queued messages on those
      * streams, but will ensure that the currently sent message (if any) is fully
